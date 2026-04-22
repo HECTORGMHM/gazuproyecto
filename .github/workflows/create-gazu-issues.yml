@@ -2,6 +2,11 @@ name: Crear Épicas e Issues de Gazu
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - copilot/create-epics-and-issues-for-gazu-app
+    paths:
+      - '.github/workflows/create-gazu-issues.yml'
 
 permissions:
   issues: write
