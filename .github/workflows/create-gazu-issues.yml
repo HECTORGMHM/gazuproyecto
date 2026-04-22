@@ -103,7 +103,7 @@ jobs:
           ## Criterios de aceptación
           **Flujo normal:**
           - Given un cliente autenticado, When selecciona servicio, staff, fecha y hora disponibles, Then se crea la cita y ambas partes reciben confirmación.
-          - Given una cita confirmada, When el propietario o staff la acepta/rechaza, Then el cliente es notificado del cambio de estado.
+          - Given una cita confirmada, When el propietario/staff cambia su estado, Then el cliente es notificado.
           - Given una cita pendiente, When el cliente la cancela con anticipación suficiente, Then la cita se libera y el slot queda disponible para otros.
           - Given el propietario, When consulta el calendario, Then ve todas las citas del día organizadas por staff.
 
