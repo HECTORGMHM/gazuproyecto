@@ -14,741 +14,745 @@ permissions:
 jobs:
   create-issues:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
     steps:
       - name: Épica - Catálogo de servicios
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Catálogo de servicios",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Sistema para que los negocios gestionen su oferta de servicios y los clientes puedan ver, buscar y filtrar los servicios disponibles antes de realizar una reserva.
+        run: |
+          TITLE="Épica: Catálogo de servicios"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Sistema para que los negocios gestionen su oferta de servicios y los clientes puedan ver, buscar y filtrar los servicios disponibles antes de realizar una reserva.
 
-            ## User Story
-            Como cliente, quiero poder ver y filtrar el catálogo de servicios de un negocio, para elegir el servicio que mejor se adapta a mis necesidades y presupuesto.
+          ## User Story
+          Como cliente, quiero poder ver y filtrar el catálogo de servicios de un negocio, para elegir el servicio que mejor se adapta a mis necesidades y presupuesto.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un cliente que accede a un negocio, When navega al catálogo, Then ve la lista de servicios disponibles con nombre, duración, precio e imagen.
-            - Given un propietario autenticado, When agrega o edita un servicio, Then los cambios se reflejan en tiempo real en el catálogo visible para clientes.
-            - Given un cliente, When aplica filtros (precio, duración, categoría), Then solo se muestran servicios que coinciden con esos criterios.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un cliente que accede a un negocio, When navega al catálogo, Then ve la lista de servicios disponibles con nombre, duración, precio e imagen.
+          - Given un propietario autenticado, When agrega o edita un servicio, Then los cambios se reflejan en tiempo real en el catálogo visible para clientes.
+          - Given un cliente, When aplica filtros (precio, duración, categoría), Then solo se muestran servicios que coinciden con esos criterios.
 
-            **Errores:**
-            - When un servicio está inactivo o sin stock, Then no aparece disponible para reserva.
-            - When la imagen no carga, Then se muestra un placeholder apropiado.
+          **Errores:**
+          - When un servicio está inactivo o sin stock, Then no aparece disponible para reserva.
+          - When la imagen no carga, Then se muestra un placeholder apropiado.
 
-            **Casos relevantes:**
-            - Catálogo con muchos servicios (paginación o carga lazy).
-            - Servicio con precio variable según staff asignado.
+          **Casos relevantes:**
+          - Catálogo con muchos servicios (paginación o carga lazy).
+          - Servicio con precio variable según staff asignado.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Pantalla de catálogo con lista/grid de servicios.
-            - Filtros por categoría, precio y duración.
-            - Pantalla de detalle de servicio.
-            - Carga de imágenes con caché (cached_network_image).
+          ## Tareas técnicas
+          **Flutter:**
+          - Pantalla de catálogo con lista/grid de servicios.
+          - Filtros por categoría, precio y duración.
+          - Pantalla de detalle de servicio.
+          - Carga de imágenes con caché (cached_network_image).
 
-            **Firestore:**
-            - Colección \`services\` con campos: nombre, descripción, duración, precio, categoría, estado, imageUrl, businessId.
-            - Índices para consultas de filtrado.
-            - Subcategorías y variantes de servicios.
+          **Firestore:**
+          - Colección \`services\` con campos: nombre, descripción, duración, precio, categoría, estado, imageUrl, businessId.
+          - Índices para consultas de filtrado.
+          - Subcategorías y variantes de servicios.
 
-            **Cloud Functions:**
-            - Validación de datos al crear/editar servicio.
-            - Actualización automática de contadores (ej. total de servicios activos).
+          **Cloud Functions:**
+          - Validación de datos al crear/editar servicio.
+          - Actualización automática de contadores (ej. total de servicios activos).
 
-            **Firebase (Storage):**
-            - Subida y gestión de imágenes de servicios.
-            - Reglas de acceso para imágenes.
+          **Firebase (Storage):**
+          - Subida y gestión de imágenes de servicios.
+          - Reglas de acceso para imágenes.
 
-            ## Consideraciones técnicas
-            - Usar streams de Firestore para actualizaciones en tiempo real.
-            - Cachear el catálogo localmente para uso offline.
-            - Manejar imágenes con resolución adecuada para no consumir exceso de datos.
+          ## Consideraciones técnicas
+          - Usar streams de Firestore para actualizaciones en tiempo real.
+          - Cachear el catálogo localmente para uso offline.
+          - Manejar imágenes con resolución adecuada para no consumir exceso de datos.
 
-            ## Edge cases
-            - Negocio elimina un servicio que tiene citas pendientes.
-            - Precio de servicio cambia entre que el cliente lo selecciona y confirma la reserva.
-            - Catálogo vacío (sin servicios activos).
+          ## Edge cases
+          - Negocio elimina un servicio que tiene citas pendientes.
+          - Precio de servicio cambia entre que el cliente lo selecciona y confirma la reserva.
+          - Catálogo vacío (sin servicios activos).
 
-            ## Prioridad
-            Alta
+          ## Prioridad
+          Alta
 
-            ## Tipo
-            Fullstack`
-            });
-            console.log("✅ Épica: Catálogo de servicios creada");
+          ## Tipo
+          Fullstack"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Sistema de citas
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Sistema de citas",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Núcleo funcional de la aplicación. Gestiona todo el ciclo de vida de una cita: creación, confirmación, modificación, cancelación y finalización. Incluye lógica de disponibilidad en tiempo real para clientes, staff y negocios.
+        run: |
+          TITLE="Épica: Sistema de citas"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Núcleo funcional de la aplicación. Gestiona todo el ciclo de vida de una cita: creación, confirmación, modificación, cancelación y finalización. Incluye lógica de disponibilidad en tiempo real para clientes, staff y negocios.
 
-            ## User Story
-            Como cliente, quiero reservar una cita con el staff de mi elección para un servicio específico, en un horario disponible, para planificar mi visita con anticipación.
+          ## User Story
+          Como cliente, quiero reservar una cita con el staff de mi elección para un servicio específico, en un horario disponible, para planificar mi visita con anticipación.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un cliente autenticado, When selecciona servicio, staff, fecha y hora disponibles, Then se crea la cita y ambas partes reciben confirmación.
-            - Given una cita confirmada, When el propietario o staff la acepta/rechaza, Then el cliente es notificado del cambio de estado.
-            - Given una cita pendiente, When el cliente la cancela con anticipación suficiente, Then la cita se libera y el slot queda disponible para otros.
-            - Given el propietario, When consulta el calendario, Then ve todas las citas del día organizadas por staff.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un cliente autenticado, When selecciona servicio, staff, fecha y hora disponibles, Then se crea la cita y ambas partes reciben confirmación.
+          - Given una cita confirmada, When el propietario o staff la acepta/rechaza, Then el cliente es notificado del cambio de estado.
+          - Given una cita pendiente, When el cliente la cancela con anticipación suficiente, Then la cita se libera y el slot queda disponible para otros.
+          - Given el propietario, When consulta el calendario, Then ve todas las citas del día organizadas por staff.
 
-            **Errores:**
-            - When dos clientes intentan reservar el mismo slot al mismo tiempo, Then solo uno tiene éxito y el otro recibe error de disponibilidad.
-            - When el negocio está inactivo (Master Switch off), Then no es posible crear nuevas citas.
+          **Errores:**
+          - When dos clientes intentan reservar el mismo slot al mismo tiempo, Then solo uno tiene éxito y el otro recibe error de disponibilidad.
+          - When el negocio está inactivo (Master Switch off), Then no es posible crear nuevas citas.
 
-            **Casos relevantes:**
-            - Citas recurrentes o reservas múltiples.
-            - Cancelación con política de penalización.
+          **Casos relevantes:**
+          - Citas recurrentes o reservas múltiples.
+          - Cancelación con política de penalización.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Pantalla de selección de fecha/hora con calendario.
-            - Selector de staff disponible.
-            - Confirmación de reserva con resumen.
-            - Historial y próximas citas del cliente.
-            - Pantalla de gestión de citas para propietario/staff.
+          ## Tareas técnicas
+          **Flutter:**
+          - Pantalla de selección de fecha/hora con calendario.
+          - Selector de staff disponible.
+          - Confirmación de reserva con resumen.
+          - Historial y próximas citas del cliente.
+          - Pantalla de gestión de citas para propietario/staff.
 
-            **Firestore:**
-            - Colección \`appointments\` con campos: clientId, staffId, serviceId, businessId, dateTime, status, notes, qrCode.
-            - Subcolección \`availability\` por staff y fecha.
-            - Transacciones para evitar doble reserva.
+          **Firestore:**
+          - Colección \`appointments\` con campos: clientId, staffId, serviceId, businessId, dateTime, status, notes, qrCode.
+          - Subcolección \`availability\` por staff y fecha.
+          - Transacciones para evitar doble reserva.
 
-            **Cloud Functions:**
-            - Función para verificar y bloquear disponibilidad de forma atómica.
-            - Trigger al crear/modificar/cancelar cita para enviar notificaciones.
-            - Limpieza de citas expiradas o no confirmadas.
+          **Cloud Functions:**
+          - Función para verificar y bloquear disponibilidad de forma atómica.
+          - Trigger al crear/modificar/cancelar cita para enviar notificaciones.
+          - Limpieza de citas expiradas o no confirmadas.
 
-            **Firebase:**
-            - Reglas de Firestore para que solo el cliente o propietario puedan modificar sus citas.
-            - Integración con FCM para notificaciones de estado.
+          **Firebase:**
+          - Reglas de Firestore para que solo el cliente o propietario puedan modificar sus citas.
+          - Integración con FCM para notificaciones de estado.
 
-            ## Consideraciones técnicas
-            - Usar transacciones de Firestore para operaciones de disponibilidad (evitar race conditions).
-            - Manejar zonas horarias correctamente.
-            - Sincronización de disponibilidad entre múltiples dispositivos en tiempo real.
+          ## Consideraciones técnicas
+          - Usar transacciones de Firestore para operaciones de disponibilidad (evitar race conditions).
+          - Manejar zonas horarias correctamente.
+          - Sincronización de disponibilidad entre múltiples dispositivos en tiempo real.
 
-            ## Edge cases
-            - Staff se enferma y hay que reasignar citas del día.
-            - Cliente cancela en el último minuto (política de cancelación).
-            - Cita creada durante una interrupción de internet (modo offline).
-            - Negocio cambia horarios con citas ya agendadas.
+          ## Edge cases
+          - Staff se enferma y hay que reasignar citas del día.
+          - Cliente cancela en el último minuto (política de cancelación).
+          - Cita creada durante una interrupción de internet (modo offline).
+          - Negocio cambia horarios con citas ya agendadas.
 
-            ## Prioridad
-            Alta
+          ## Prioridad
+          Alta
 
-            ## Tipo
-            Fullstack`
-            });
-            console.log("✅ Épica: Sistema de citas creada");
+          ## Tipo
+          Fullstack"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Gestión de staff
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Gestión de staff",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Módulo que permite a los propietarios de negocios administrar a su equipo de trabajo: agregar/eliminar empleados, asignar servicios que pueden realizar, configurar sus horarios de disponibilidad y gestionar permisos de acceso a la app.
+        run: |
+          TITLE="Épica: Gestión de staff"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Módulo que permite a los propietarios de negocios administrar a su equipo de trabajo: agregar/eliminar empleados, asignar servicios que pueden realizar, configurar sus horarios de disponibilidad y gestionar permisos de acceso a la app.
 
-            ## User Story
-            Como propietario de negocio, quiero administrar a mi equipo de trabajo y sus horarios, para que los clientes puedan reservar citas con el empleado de su preferencia y los horarios sean precisos.
+          ## User Story
+          Como propietario de negocio, quiero administrar a mi equipo de trabajo y sus horarios, para que los clientes puedan reservar citas con el empleado de su preferencia y los horarios sean precisos.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un propietario autenticado, When agrega un empleado con su correo, Then el empleado recibe invitación y puede acceder con su rol.
-            - Given un empleado activo, When el propietario configura su horario, Then ese horario determina los slots disponibles para reservas.
-            - Given un empleado, When se le asignan servicios, Then solo aparece como opción disponible para esos servicios específicos.
-            - Given permisos configurados, When el staff accede a la app, Then solo ve las funcionalidades correspondientes a su rol.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un propietario autenticado, When agrega un empleado con su correo, Then el empleado recibe invitación y puede acceder con su rol.
+          - Given un empleado activo, When el propietario configura su horario, Then ese horario determina los slots disponibles para reservas.
+          - Given un empleado, When se le asignan servicios, Then solo aparece como opción disponible para esos servicios específicos.
+          - Given permisos configurados, When el staff accede a la app, Then solo ve las funcionalidades correspondientes a su rol.
 
-            **Errores:**
-            - When se intenta eliminar staff con citas futuras, Then el sistema advierte y pide confirmación o reasignación.
-            - When el correo del staff ya existe en el sistema, Then se muestra error apropiado.
+          **Errores:**
+          - When se intenta eliminar staff con citas futuras, Then el sistema advierte y pide confirmación o reasignación.
+          - When el correo del staff ya existe en el sistema, Then se muestra error apropiado.
 
-            **Casos relevantes:**
-            - Staff que trabaja en múltiples negocios.
-            - Cambios de horario de emergencia (staff enfermo).
+          **Casos relevantes:**
+          - Staff que trabaja en múltiples negocios.
+          - Cambios de horario de emergencia (staff enfermo).
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Pantalla de lista y gestión de staff.
-            - Formulario para agregar/editar empleado.
-            - Configuración de horarios semanales por staff.
-            - Asignación de servicios a staff.
-            - Gestión de permisos y roles.
+          ## Tareas técnicas
+          **Flutter:**
+          - Pantalla de lista y gestión de staff.
+          - Formulario para agregar/editar empleado.
+          - Configuración de horarios semanales por staff.
+          - Asignación de servicios a staff.
+          - Gestión de permisos y roles.
 
-            **Firestore:**
-            - Colección \`staff\` con campos: userId, businessId, nombre, servicios[], horarios{}, rol, estado, fotoUrl.
-            - Subcolección \`schedules\` para disponibilidad por día/hora.
-            - Relación entre staff y servicios.
+          **Firestore:**
+          - Colección \`staff\` con campos: userId, businessId, nombre, servicios[], horarios{}, rol, estado, fotoUrl.
+          - Subcolección \`schedules\` para disponibilidad por día/hora.
+          - Relación entre staff y servicios.
 
-            **Cloud Functions:**
-            - Envío de invitación por correo al nuevo staff.
-            - Propagación de cambios de horario a disponibilidad de citas.
-            - Validación de conflictos al cambiar horarios.
+          **Cloud Functions:**
+          - Envío de invitación por correo al nuevo staff.
+          - Propagación de cambios de horario a disponibilidad de citas.
+          - Validación de conflictos al cambiar horarios.
 
-            **Firebase (Auth):**
-            - Asignación de custom claims para roles (owner, staff, client).
-            - Reglas de Firestore diferenciadas por rol.
+          **Firebase (Auth):**
+          - Asignación de custom claims para roles (owner, staff, client).
+          - Reglas de Firestore diferenciadas por rol.
 
-            ## Consideraciones técnicas
-            - Los cambios de horario de staff deben propagar al motor de disponibilidad de citas.
-            - Los permisos deben validarse tanto en cliente (Flutter) como en servidor (Firestore Rules y Cloud Functions).
-            - Un mismo usuario puede ser staff de múltiples negocios.
+          ## Consideraciones técnicas
+          - Los cambios de horario de staff deben propagar al motor de disponibilidad de citas.
+          - Los permisos deben validarse tanto en cliente (Flutter) como en servidor (Firestore Rules y Cloud Functions).
+          - Un mismo usuario puede ser staff de múltiples negocios.
 
-            ## Edge cases
-            - Propietario elimina su propio staff cuando solo queda uno.
-            - Staff con citas activas es dado de baja.
-            - Conflicto de horarios al asignar turnos superpuestos.
-            - Staff que no tiene cuenta de Firebase aún.
+          ## Edge cases
+          - Propietario elimina su propio staff cuando solo queda uno.
+          - Staff con citas activas es dado de baja.
+          - Conflicto de horarios al asignar turnos superpuestos.
+          - Staff que no tiene cuenta de Firebase aún.
 
-            ## Prioridad
-            Media
+          ## Prioridad
+          Media
 
-            ## Tipo
-            Fullstack`
-            });
-            console.log("✅ Épica: Gestión de staff creada");
+          ## Tipo
+          Fullstack"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Experiencia del usuario (flujo de reserva)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Experiencia del usuario (flujo de reserva)",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Diseño e implementación del flujo completo que experimenta un cliente al buscar un negocio, explorar servicios, seleccionar staff y horario, y confirmar su reserva. Se enfoca en la UX/UI para maximizar conversiones y minimizar fricción.
+        run: |
+          TITLE="Épica: Experiencia del usuario (flujo de reserva)"
+          EXISTS=$(gh issue list --repo "$REPO" --search "Experiencia del usuario" --json title --jq '.[].title' | grep -F "Experiencia del usuario" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Diseño e implementación del flujo completo que experimenta un cliente al buscar un negocio, explorar servicios, seleccionar staff y horario, y confirmar su reserva. Se enfoca en la UX/UI para maximizar conversiones y minimizar fricción.
 
-            ## User Story
-            Como cliente, quiero un flujo de reserva intuitivo y rápido, para poder agendar mis citas sin confusión y con la menor cantidad de pasos posible.
+          ## User Story
+          Como cliente, quiero un flujo de reserva intuitivo y rápido, para poder agendar mis citas sin confusión y con la menor cantidad de pasos posible.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un cliente en la pantalla principal, When busca un servicio o negocio, Then ve resultados relevantes ordenados por proximidad y calificación.
-            - Given un cliente que selecciona un negocio, When navega por el flujo de reserva (servicio → staff → fecha/hora → confirmación), Then completa la reserva en máximo 4 pasos.
-            - Given una reserva completada, When el cliente accede a "Mis citas", Then ve el historial con estado actualizado de cada cita.
-            - Given el cliente en pantalla de confirmación, When la cita se crea exitosamente, Then recibe un resumen con todos los detalles y opción de agregar al calendario.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un cliente en la pantalla principal, When busca un servicio o negocio, Then ve resultados relevantes ordenados por proximidad y calificación.
+          - Given un cliente que selecciona un negocio, When navega por el flujo de reserva (servicio → staff → fecha/hora → confirmación), Then completa la reserva en máximo 4 pasos.
+          - Given una reserva completada, When el cliente accede a Mis citas, Then ve el historial con estado actualizado de cada cita.
+          - Given el cliente en pantalla de confirmación, When la cita se crea exitosamente, Then recibe un resumen con todos los detalles y opción de agregar al calendario.
 
-            **Errores:**
-            - When el slot seleccionado ya no está disponible al confirmar, Then se notifica al cliente y se le muestra alternativas.
-            - When hay error de conexión durante la reserva, Then los datos ingresados se preservan y puede reintentar.
+          **Errores:**
+          - When el slot seleccionado ya no está disponible al confirmar, Then se notifica al cliente y se le muestra alternativas.
+          - When hay error de conexión durante la reserva, Then los datos ingresados se preservan y puede reintentar.
 
-            **Casos relevantes:**
-            - Reserva express (cliente frecuente repite reserva anterior).
-            - Exploración del catálogo sin intención inmediata de reservar.
+          **Casos relevantes:**
+          - Reserva express (cliente frecuente repite reserva anterior).
+          - Exploración del catálogo sin intención inmediata de reservar.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Pantalla de inicio/búsqueda con barra de búsqueda y categorías.
-            - Flujo de reserva multi-paso (Stepper widget).
-            - Pantalla de confirmación con resumen y código QR.
-            - Sección "Mis citas" con historial y próximas reservas.
-            - Animaciones y transiciones para UX fluida.
-            - Deep links para acceso directo a negocios o servicios.
+          ## Tareas técnicas
+          **Flutter:**
+          - Pantalla de inicio/búsqueda con barra de búsqueda y categorías.
+          - Flujo de reserva multi-paso (Stepper widget).
+          - Pantalla de confirmación con resumen y código QR.
+          - Sección Mis citas con historial y próximas reservas.
+          - Animaciones y transiciones para UX fluida.
+          - Deep links para acceso directo a negocios o servicios.
 
-            **Firestore:**
-            - Queries optimizados para búsqueda de negocios y servicios.
-            - Caché de negocios frecuentes del usuario.
-            - Registro de historial de reservas del cliente.
+          **Firestore:**
+          - Queries optimizados para búsqueda de negocios y servicios.
+          - Caché de negocios frecuentes del usuario.
+          - Registro de historial de reservas del cliente.
 
-            **Cloud Functions:**
-            - Búsqueda full-text de negocios (integración con Algolia o búsqueda nativa).
-            - Generación de resúmenes de reserva.
+          **Cloud Functions:**
+          - Búsqueda full-text de negocios (integración con Algolia o búsqueda nativa).
+          - Generación de resúmenes de reserva.
 
-            **Firebase:**
-            - Analytics para medir conversion funnel del flujo de reserva.
-            - Dynamic Links para compartir negocios/servicios.
+          **Firebase:**
+          - Analytics para medir conversion funnel del flujo de reserva.
+          - Dynamic Links para compartir negocios/servicios.
 
-            ## Consideraciones técnicas
-            - El flujo debe funcionar offline-first: guardar borrador de reserva localmente.
-            - Accessibility: soporte para lectores de pantalla y tamaños de fuente dinámicos.
-            - Localización: soporte multi-idioma desde el inicio.
-            - Performance: carga inicial < 2 segundos.
+          ## Consideraciones técnicas
+          - El flujo debe funcionar offline-first: guardar borrador de reserva localmente.
+          - Accessibility: soporte para lectores de pantalla y tamaños de fuente dinámicos.
+          - Localización: soporte multi-idioma desde el inicio.
+          - Performance: carga inicial menor a 2 segundos.
 
-            ## Edge cases
-            - Cliente en zona sin cobertura intenta hacer reserva.
-            - Negocio cierra permanentemente con reservas activas.
-            - Cliente con discapacidad visual usa la app con VoiceOver/TalkBack.
-            - Múltiples pestañas/dispositivos del mismo cliente.
+          ## Edge cases
+          - Cliente en zona sin cobertura intenta hacer reserva.
+          - Negocio cierra permanentemente con reservas activas.
+          - Cliente con discapacidad visual usa la app con VoiceOver/TalkBack.
+          - Múltiples pestañas/dispositivos del mismo cliente.
 
-            ## Prioridad
-            Alta
+          ## Prioridad
+          Alta
 
-            ## Tipo
-            Mobile`
-            });
-            console.log("✅ Épica: Experiencia del usuario creada");
+          ## Tipo
+          Mobile"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Geolocalización y mapa
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Geolocalización y mapa",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Integración de capacidades de geolocalización para mostrar negocios cercanos al usuario, filtrar por distancia, visualizar en mapa interactivo y calcular tiempos de desplazamiento. Esencial para la experiencia de descubrimiento de negocios.
+        run: |
+          TITLE="Épica: Geolocalización y mapa"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Integración de capacidades de geolocalización para mostrar negocios cercanos al usuario, filtrar por distancia, visualizar en mapa interactivo y calcular tiempos de desplazamiento. Esencial para la experiencia de descubrimiento de negocios.
 
-            ## User Story
-            Como cliente, quiero ver los negocios disponibles en un mapa cercano a mi ubicación, para elegir el más conveniente según la distancia y tiempo de desplazamiento.
+          ## User Story
+          Como cliente, quiero ver los negocios disponibles en un mapa cercano a mi ubicación, para elegir el más conveniente según la distancia y tiempo de desplazamiento.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un cliente con permisos de ubicación activos, When abre la pantalla de búsqueda, Then ve un mapa con marcadores de negocios cercanos.
-            - Given el mapa visible, When el cliente mueve el mapa o cambia el radio de búsqueda, Then los marcadores se actualizan dinámicamente.
-            - Given un marcador seleccionado, When el cliente toca el negocio en el mapa, Then ve un resumen rápido con opción de ver detalles o reservar.
-            - Given un negocio seleccionado, When el cliente solicita cómo llegar, Then se abre la app de navegación con la ruta calculada.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un cliente con permisos de ubicación activos, When abre la pantalla de búsqueda, Then ve un mapa con marcadores de negocios cercanos.
+          - Given el mapa visible, When el cliente mueve el mapa o cambia el radio de búsqueda, Then los marcadores se actualizan dinámicamente.
+          - Given un marcador seleccionado, When el cliente toca el negocio en el mapa, Then ve un resumen rápido con opción de ver detalles o reservar.
+          - Given un negocio seleccionado, When el cliente solicita cómo llegar, Then se abre la app de navegación con la ruta calculada.
 
-            **Errores:**
-            - When el usuario deniega permisos de ubicación, Then la app funciona con búsqueda manual por ciudad/dirección.
-            - When no hay negocios en el radio seleccionado, Then se muestra mensaje apropiado con sugerencia de ampliar radio.
+          **Errores:**
+          - When el usuario deniega permisos de ubicación, Then la app funciona con búsqueda manual por ciudad/dirección.
+          - When no hay negocios en el radio seleccionado, Then se muestra mensaje apropiado con sugerencia de ampliar radio.
 
-            **Casos relevantes:**
-            - Usuario en roaming o viaje (ubicación muy diferente a la habitual).
-            - Negocios con múltiples sucursales.
+          **Casos relevantes:**
+          - Usuario en roaming o viaje (ubicación muy diferente a la habitual).
+          - Negocios con múltiples sucursales.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Integración de Google Maps SDK (google_maps_flutter).
-            - Solicitud y manejo de permisos de ubicación (permission_handler).
-            - Marcadores personalizados para negocios en el mapa.
-            - Lista/mapa toggle para ver negocios en dos formatos.
-            - Geocoding para búsqueda por dirección (geocoding package).
-            - Cálculo de distancia entre usuario y negocio (geolocator).
+          ## Tareas técnicas
+          **Flutter:**
+          - Integración de Google Maps SDK (google_maps_flutter).
+          - Solicitud y manejo de permisos de ubicación (permission_handler).
+          - Marcadores personalizados para negocios en el mapa.
+          - Lista/mapa toggle para ver negocios en dos formatos.
+          - Geocoding para búsqueda por dirección (geocoding package).
+          - Cálculo de distancia entre usuario y negocio (geolocator).
 
-            **Firestore:**
-            - Almacenar coordenadas GeoPoint en documentos de negocios.
-            - Queries geoespaciales (GeoFlutterFire o queries manuales).
-            - Índice geoespacial para búsquedas por proximidad eficientes.
+          **Firestore:**
+          - Almacenar coordenadas GeoPoint en documentos de negocios.
+          - Queries geoespaciales (GeoFlutterFire o queries manuales).
+          - Índice geoespacial para búsquedas por proximidad eficientes.
 
-            **Cloud Functions:**
-            - Función para calcular y actualizar distancias.
-            - Búsqueda de negocios por radio geográfico.
+          **Cloud Functions:**
+          - Función para calcular y actualizar distancias.
+          - Búsqueda de negocios por radio geográfico.
 
-            **Firebase:**
-            - Google Maps API Key configurada por plataforma (Android/iOS).
-            - Reglas de Firestore para lectura pública de ubicaciones de negocios.
+          **Firebase:**
+          - Google Maps API Key configurada por plataforma (Android/iOS).
+          - Reglas de Firestore para lectura pública de ubicaciones de negocios.
 
-            ## Consideraciones técnicas
-            - Manejar el consumo de batería por uso de GPS (usar ubicación aproximada cuando sea suficiente).
-            - Cachear últimas ubicaciones y negocios consultados.
-            - Respetar la privacidad: no almacenar historial de ubicaciones del usuario sin consentimiento.
-            - Limitar las actualizaciones de ubicación en background.
+          ## Consideraciones técnicas
+          - Manejar el consumo de batería por uso de GPS (usar ubicación aproximada cuando sea suficiente).
+          - Cachear últimas ubicaciones y negocios consultados.
+          - Respetar la privacidad: no almacenar historial de ubicaciones del usuario sin consentimiento.
+          - Limitar las actualizaciones de ubicación en background.
 
-            ## Edge cases
-            - Usuario no tiene GPS activado (solo wifi/cell tower).
-            - Negocio sin coordenadas configuradas.
-            - Usuario en zona rural sin negocios cercanos.
-            - Permisos de ubicación revocados mientras se usa la app.
+          ## Edge cases
+          - Usuario no tiene GPS activado (solo wifi/cell tower).
+          - Negocio sin coordenadas configuradas.
+          - Usuario en zona rural sin negocios cercanos.
+          - Permisos de ubicación revocados mientras se usa la app.
 
-            ## Prioridad
-            Media
+          ## Prioridad
+          Media
 
-            ## Tipo
-            Mobile`
-            });
-            console.log("✅ Épica: Geolocalización y mapa creada");
+          ## Tipo
+          Mobile"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Notificaciones push
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Notificaciones push",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Sistema completo de notificaciones push para mantener informados a clientes, staff y propietarios sobre el estado de sus citas, cambios, recordatorios y actualizaciones de la plataforma. Usa Firebase Cloud Messaging (FCM).
+        run: |
+          TITLE="Épica: Notificaciones push"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Sistema completo de notificaciones push para mantener informados a clientes, staff y propietarios sobre el estado de sus citas, cambios, recordatorios y actualizaciones de la plataforma. Usa Firebase Cloud Messaging (FCM).
 
-            ## User Story
-            Como cliente, quiero recibir notificaciones push sobre mis citas (confirmación, recordatorio, cambios), para estar siempre informado sin necesidad de abrir la app.
+          ## User Story
+          Como cliente, quiero recibir notificaciones push sobre mis citas (confirmación, recordatorio, cambios), para estar siempre informado sin necesidad de abrir la app.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given una cita creada, When el sistema confirma la reserva, Then el cliente recibe notificación push de confirmación con detalles.
-            - Given una cita próxima (24h y 1h antes), When llega el tiempo programado, Then el cliente recibe recordatorio automático.
-            - Given un propietario/staff que cambia el estado de una cita, When guarda el cambio, Then el cliente afectado recibe notificación inmediata.
-            - Given un cliente que toca la notificación, When la app abre, Then navega directamente a la pantalla de detalle de la cita correspondiente.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given una cita creada, When el sistema confirma la reserva, Then el cliente recibe notificación push de confirmación con detalles.
+          - Given una cita próxima (24h y 1h antes), When llega el tiempo programado, Then el cliente recibe recordatorio automático.
+          - Given un propietario/staff que cambia el estado de una cita, When guarda el cambio, Then el cliente afectado recibe notificación inmediata.
+          - Given un cliente que toca la notificación, When la app abre, Then navega directamente a la pantalla de detalle de la cita correspondiente.
 
-            **Errores:**
-            - When el token FCM de un usuario ha expirado, Then el sistema actualiza el token automáticamente.
-            - When el usuario tiene notificaciones desactivadas en el sistema, Then la app muestra aviso para habilitarlas.
+          **Errores:**
+          - When el token FCM de un usuario ha expirado, Then el sistema actualiza el token automáticamente.
+          - When el usuario tiene notificaciones desactivadas en el sistema, Then la app muestra aviso para habilitarlas.
 
-            **Casos relevantes:**
-            - Notificaciones cuando la app está en segundo plano o cerrada.
-            - Notificaciones silenciosas para sincronización de datos.
+          **Casos relevantes:**
+          - Notificaciones cuando la app está en segundo plano o cerrada.
+          - Notificaciones silenciosas para sincronización de datos.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Integración de firebase_messaging package.
-            - Solicitud de permisos de notificación (iOS/Android).
-            - Manejo de notificaciones en foreground, background y terminated.
-            - Navegación desde notificación a pantalla específica (deep linking).
-            - Pantalla de configuración de preferencias de notificación.
+          ## Tareas técnicas
+          **Flutter:**
+          - Integración de firebase_messaging package.
+          - Solicitud de permisos de notificación (iOS/Android).
+          - Manejo de notificaciones en foreground, background y terminated.
+          - Navegación desde notificación a pantalla específica (deep linking).
+          - Pantalla de configuración de preferencias de notificación.
 
-            **Firestore:**
-            - Almacenar tokens FCM por usuario (colección \`userTokens\`).
-            - Preferencias de notificación por usuario.
-            - Registro de notificaciones enviadas para auditoría.
+          **Firestore:**
+          - Almacenar tokens FCM por usuario (colección userTokens).
+          - Preferencias de notificación por usuario.
+          - Registro de notificaciones enviadas para auditoría.
 
-            **Cloud Functions:**
-            - Trigger en cambios de cita para enviar notificaciones.
-            - Función programada para recordatorios (Cloud Scheduler).
-            - Función para limpiar tokens FCM inválidos.
-            - Envío de notificaciones masivas a múltiples usuarios.
+          **Cloud Functions:**
+          - Trigger en cambios de cita para enviar notificaciones.
+          - Función programada para recordatorios (Cloud Scheduler).
+          - Función para limpiar tokens FCM inválidos.
+          - Envío de notificaciones masivas a múltiples usuarios.
 
-            **Firebase (FCM):**
-            - Configuración de FCM en Android e iOS.
-            - Topics para notificaciones grupales (por negocio, por rol).
-            - Analytics de notificaciones (tasa de apertura).
+          **Firebase (FCM):**
+          - Configuración de FCM en Android e iOS.
+          - Topics para notificaciones grupales (por negocio, por rol).
+          - Analytics de notificaciones (tasa de apertura).
 
-            ## Consideraciones técnicas
-            - Respetar preferencias del usuario (no notificar si desactivó).
-            - Manejar diferencias de permisos entre iOS y Android.
-            - Rate limiting en envío de notificaciones para evitar spam.
-            - Localización de mensajes de notificación (multi-idioma).
+          ## Consideraciones técnicas
+          - Respetar preferencias del usuario (no notificar si desactivó).
+          - Manejar diferencias de permisos entre iOS y Android.
+          - Rate limiting en envío de notificaciones para evitar spam.
+          - Localización de mensajes de notificación (multi-idioma).
 
-            ## Edge cases
-            - Usuario con múltiples dispositivos (enviar a todos o solo al último activo).
-            - Notificación llega cuando el usuario ya vio la información.
-            - App actualizada con cambio en estructura de deep links.
-            - Usuario desinstala y reinstala la app (token FCM cambia).
+          ## Edge cases
+          - Usuario con múltiples dispositivos (enviar a todos o solo al último activo).
+          - Notificación llega cuando el usuario ya vio la información.
+          - App actualizada con cambio en estructura de deep links.
+          - Usuario desinstala y reinstala la app (token FCM cambia).
 
-            ## Prioridad
-            Media
+          ## Prioridad
+          Media
 
-            ## Tipo
-            Backend`
-            });
-            console.log("✅ Épica: Notificaciones push creada");
+          ## Tipo
+          Backend"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Check-in con QR
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Check-in con QR",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Sistema de confirmación de llegada del cliente al negocio mediante código QR. El cliente presenta un QR único por cita y el staff lo escanea para registrar la asistencia, iniciar el servicio y validar la identidad del cliente.
+        run: |
+          TITLE="Épica: Check-in con QR"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Sistema de confirmación de llegada del cliente al negocio mediante código QR. El cliente presenta un QR único por cita y el staff lo escanea para registrar la asistencia, iniciar el servicio y validar la identidad del cliente.
 
-            ## User Story
-            Como cliente, quiero presentar un código QR al llegar al negocio, para confirmar mi asistencia de forma rápida y sin necesidad de dar datos verbalmente.
+          ## User Story
+          Como cliente, quiero presentar un código QR al llegar al negocio, para confirmar mi asistencia de forma rápida y sin necesidad de dar datos verbalmente.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given una cita confirmada, When el cliente accede al detalle de la cita, Then ve un código QR único asociado a esa cita.
-            - Given el staff con permisos de scanner, When escanea el QR del cliente, Then el sistema valida la cita y registra el check-in automáticamente.
-            - Given un check-in exitoso, When se registra la llegada, Then el estado de la cita cambia a "En progreso" y ambas partes son notificadas.
-            - Given el QR escaneado, When la cita es válida para ese día y hora, Then el check-in se completa en menos de 2 segundos.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given una cita confirmada, When el cliente accede al detalle de la cita, Then ve un código QR único asociado a esa cita.
+          - Given el staff con permisos de scanner, When escanea el QR del cliente, Then el sistema valida la cita y registra el check-in automáticamente.
+          - Given un check-in exitoso, When se registra la llegada, Then el estado de la cita cambia a En progreso y ambas partes son notificadas.
+          - Given el QR escaneado, When la cita es válida para ese día y hora, Then el check-in se completa en menos de 2 segundos.
 
-            **Errores:**
-            - When el QR pertenece a una cita cancelada o expirada, Then el scanner muestra error descriptivo.
-            - When el QR no puede leerse por mala iluminación, Then el staff puede ingresar el código manualmente.
+          **Errores:**
+          - When el QR pertenece a una cita cancelada o expirada, Then el scanner muestra error descriptivo.
+          - When el QR no puede leerse por mala iluminación, Then el staff puede ingresar el código manualmente.
 
-            **Casos relevantes:**
-            - Cliente llega antes de tiempo (cita aún no ha comenzado).
-            - QR caducado por tiempo transcurrido.
+          **Casos relevantes:**
+          - Cliente llega antes de tiempo (cita aún no ha comenzado).
+          - QR caducado por tiempo transcurrido.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Generación de QR con package \`qr_flutter\`.
-            - Scanner de QR con \`mobile_scanner\` (soporte iOS/Android).
-            - Pantalla de check-in para staff con feedback visual/sonoro.
-            - QR con datos encriptados (no exponer IDs directamente).
-            - Modo de pantalla completa para mostrar QR en el cliente.
+          ## Tareas técnicas
+          **Flutter:**
+          - Generación de QR con package qr_flutter.
+          - Scanner de QR con mobile_scanner (soporte iOS/Android).
+          - Pantalla de check-in para staff con feedback visual/sonoro.
+          - QR con datos encriptados (no exponer IDs directamente).
+          - Modo de pantalla completa para mostrar QR en el cliente.
 
-            **Firestore:**
-            - Campo \`qrToken\` único en documentos de citas (hash seguro).
-            - Campo \`checkInTime\` y \`checkInStaffId\` en citas.
-            - Log de check-ins para auditoría.
+          **Firestore:**
+          - Campo qrToken único en documentos de citas (hash seguro).
+          - Campo checkInTime y checkInStaffId en citas.
+          - Log de check-ins para auditoría.
 
-            **Cloud Functions:**
-            - Función de validación de QR que verifica token, fecha, estado de cita.
-            - Actualización atómica del estado al registrar check-in.
-            - Generación de tokens QR seguros (firmados) al crear la cita.
+          **Cloud Functions:**
+          - Función de validación de QR que verifica token, fecha, estado de cita.
+          - Actualización atómica del estado al registrar check-in.
+          - Generación de tokens QR seguros (firmados) al crear la cita.
 
-            **Firebase:**
-            - Reglas para que solo staff del negocio pueda validar QR de sus citas.
-            - Expiración de tokens QR después de N horas.
+          **Firebase:**
+          - Reglas para que solo staff del negocio pueda validar QR de sus citas.
+          - Expiración de tokens QR después de N horas.
 
-            ## Consideraciones técnicas
-            - El token QR debe ser único, no predecible y expirar.
-            - Validar QR en servidor (Cloud Function), no solo en cliente.
-            - Soporte para modo offline: cachear QR generado localmente.
-            - El scanner debe funcionar bajo condiciones de poca luz.
+          ## Consideraciones técnicas
+          - El token QR debe ser único, no predecible y expirar.
+          - Validar QR en servidor (Cloud Function), no solo en cliente.
+          - Soporte para modo offline: cachear QR generado localmente.
+          - El scanner debe funcionar bajo condiciones de poca luz.
 
-            ## Edge cases
-            - Cliente muestra QR en pantalla con brillo muy bajo.
-            - Staff intenta escanear el mismo QR dos veces.
-            - QR escaneado de una cita de otro negocio.
-            - Cliente no tiene batería suficiente para mostrar QR (backup: código numérico).
+          ## Edge cases
+          - Cliente muestra QR en pantalla con brillo muy bajo.
+          - Staff intenta escanear el mismo QR dos veces.
+          - QR escaneado de una cita de otro negocio.
+          - Cliente no tiene batería suficiente para mostrar QR (backup: código numérico).
 
-            ## Prioridad
-            Media
+          ## Prioridad
+          Media
 
-            ## Tipo
-            Mobile`
-            });
-            console.log("✅ Épica: Check-in con QR creada");
+          ## Tipo
+          Mobile"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Backend con Cloud Functions
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Backend con Cloud Functions",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Implementación de la lógica de negocio serverless usando Firebase Cloud Functions. Incluye funciones para operaciones críticas que no deben ejecutarse en el cliente: disponibilidad atómica, notificaciones, cálculo de reputación, validaciones y tareas programadas.
+        run: |
+          TITLE="Épica: Backend con Cloud Functions"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Implementación de la lógica de negocio serverless usando Firebase Cloud Functions. Incluye funciones para operaciones críticas que no deben ejecutarse en el cliente: disponibilidad atómica, notificaciones, cálculo de reputación, validaciones y tareas programadas.
 
-            ## User Story
-            Como desarrollador, quiero centralizar la lógica de negocio crítica en Cloud Functions, para garantizar que las operaciones sean seguras, atómicas y no dependan de la confiabilidad del cliente móvil.
+          ## User Story
+          Como desarrollador, quiero centralizar la lógica de negocio crítica en Cloud Functions, para garantizar que las operaciones sean seguras, atómicas y no dependan de la confiabilidad del cliente móvil.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given una operación de reserva, When la Cloud Function se ejecuta, Then verifica disponibilidad y crea la cita de forma atómica en menos de 3 segundos.
-            - Given un cambio de estado en una cita, When se dispara el trigger de Firestore, Then la notificación push se envía en menos de 5 segundos.
-            - Given una función programada (scheduled), When se ejecuta en el horario configurado, Then completa su tarea y registra el resultado en logs.
-            - Given un error en una Cloud Function, When ocurre, Then se registra en Firebase Crashlytics/Logging y se puede depurar.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given una operación de reserva, When la Cloud Function se ejecuta, Then verifica disponibilidad y crea la cita de forma atómica en menos de 3 segundos.
+          - Given un cambio de estado en una cita, When se dispara el trigger de Firestore, Then la notificación push se envía en menos de 5 segundos.
+          - Given una función programada (scheduled), When se ejecuta en el horario configurado, Then completa su tarea y registra el resultado en logs.
+          - Given un error en una Cloud Function, When ocurre, Then se registra en Firebase Crashlytics/Logging y se puede depurar.
 
-            **Errores:**
-            - When una Cloud Function falla por timeout, Then reintenta según la política configurada.
-            - When la función recibe datos inválidos, Then retorna error 400 con mensaje descriptivo.
+          **Errores:**
+          - When una Cloud Function falla por timeout, Then reintenta según la política configurada.
+          - When la función recibe datos inválidos, Then retorna error 400 con mensaje descriptivo.
 
-            **Casos relevantes:**
-            - Alta carga simultánea (muchas reservas al mismo tiempo).
-            - Cold starts de funciones poco usadas.
+          **Casos relevantes:**
+          - Alta carga simultánea (muchas reservas al mismo tiempo).
+          - Cold starts de funciones poco usadas.
 
-            ## Tareas técnicas
-            **Cloud Functions (Node.js/TypeScript):**
-            - \`createAppointment\`: Verifica disponibilidad y crea cita de forma atómica.
-            - \`onAppointmentStatusChange\`: Trigger al cambiar estado → envía notificaciones.
-            - \`sendReminders\`: Función programada para recordatorios de citas próximas.
-            - \`validateQRCheckIn\`: Valida y procesa check-in por QR.
-            - \`updateReputationScore\`: Recalcula puntuación al recibir reseña.
-            - \`cleanupExpiredAppointments\`: Limpieza de citas expiradas/pendientes antiguas.
-            - \`onUserDeleted\`: Limpieza de datos al eliminar usuario (GDPR).
-            - \`generateQRToken\`: Genera token seguro para QR de cita.
-            - \`sendPushNotification\`: Función central de envío de push.
+          ## Tareas técnicas
+          **Cloud Functions (Node.js/TypeScript):**
+          - createAppointment: Verifica disponibilidad y crea cita de forma atómica.
+          - onAppointmentStatusChange: Trigger al cambiar estado, envía notificaciones.
+          - sendReminders: Función programada para recordatorios de citas próximas.
+          - validateQRCheckIn: Valida y procesa check-in por QR.
+          - updateReputationScore: Recalcula puntuación al recibir reseña.
+          - cleanupExpiredAppointments: Limpieza de citas expiradas/pendientes antiguas.
+          - onUserDeleted: Limpieza de datos al eliminar usuario (GDPR).
+          - generateQRToken: Genera token seguro para QR de cita.
+          - sendPushNotification: Función central de envío de push.
 
-            **Firestore:**
-            - Estructura de datos optimizada para consultas de Cloud Functions.
-            - Colección de logs/audit para operaciones críticas.
+          **Firestore:**
+          - Estructura de datos optimizada para consultas de Cloud Functions.
+          - Colección de logs/audit para operaciones críticas.
 
-            **Firebase:**
-            - Configuración de entornos (dev/staging/prod).
-            - Variables de entorno con Firebase Functions Config.
-            - Presupuesto y alertas de Cloud Functions.
+          **Firebase:**
+          - Configuración de entornos (dev/staging/prod).
+          - Variables de entorno con Firebase Functions Config.
+          - Presupuesto y alertas de Cloud Functions.
 
-            ## Consideraciones técnicas
-            - Usar TypeScript para Cloud Functions (type safety).
-            - Implementar retry logic con exponential backoff.
-            - Optimizar cold starts (mantener funciones warm cuando sea necesario).
-            - Separar funciones por contexto (appointments, notifications, users).
-            - Tests unitarios para todas las Cloud Functions.
-            - Monitoreo y alertas via Firebase Performance Monitoring.
+          ## Consideraciones técnicas
+          - Usar TypeScript para Cloud Functions (type safety).
+          - Implementar retry logic con exponential backoff.
+          - Optimizar cold starts (mantener funciones warm cuando sea necesario).
+          - Separar funciones por contexto (appointments, notifications, users).
+          - Tests unitarios para todas las Cloud Functions.
+          - Monitoreo y alertas via Firebase Performance Monitoring.
 
-            ## Edge cases
-            - Función ejecutada en paralelo por múltiples triggers simultáneos.
-            - Timeout en operaciones de Firestore con mucha carga.
-            - Cambio de estructura de datos de Firestore con funciones en producción.
-            - Función de limpieza elimina datos que aún se necesitan.
+          ## Edge cases
+          - Función ejecutada en paralelo por múltiples triggers simultáneos.
+          - Timeout en operaciones de Firestore con mucha carga.
+          - Cambio de estructura de datos de Firestore con funciones en producción.
+          - Función de limpieza elimina datos que aún se necesitan.
 
-            ## Prioridad
-            Alta
+          ## Prioridad
+          Alta
 
-            ## Tipo
-            Backend`
-            });
-            console.log("✅ Épica: Backend con Cloud Functions creada");
+          ## Tipo
+          Backend"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Seguridad (Firestore Rules)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Seguridad (Firestore Rules)",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Implementación y validación de reglas de seguridad en Firestore para garantizar que cada usuario solo pueda acceder y modificar los datos que le corresponden según su rol. Incluye validaciones de datos, control de acceso granular y auditoría.
+        run: |
+          TITLE="Épica: Seguridad (Firestore Rules)"
+          EXISTS=$(gh issue list --repo "$REPO" --search "Seguridad" --json title --jq '.[].title' | grep -F "Seguridad" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Implementación y validación de reglas de seguridad en Firestore para garantizar que cada usuario solo pueda acceder y modificar los datos que le corresponden según su rol. Incluye validaciones de datos, control de acceso granular y auditoría.
 
-            ## User Story
-            Como propietario del sistema, quiero que las reglas de Firestore protejan los datos de cada usuario y negocio, para que ningún actor malicioso pueda acceder o modificar información que no le pertenece.
+          ## User Story
+          Como propietario del sistema, quiero que las reglas de Firestore protejan los datos de cada usuario y negocio, para que ningún actor malicioso pueda acceder o modificar información que no le pertenece.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un cliente autenticado, When intenta leer datos de sus propias citas, Then tiene acceso. When intenta leer citas de otro cliente, Then se deniega el acceso.
-            - Given un propietario autenticado, When gestiona su negocio, Then puede leer/escribir todos los datos de su negocio. When intenta acceder a datos de otro negocio, Then se deniega.
-            - Given staff autenticado, When accede a las citas de su negocio, Then puede verlas. When intenta modificar datos fuera de su negocio, Then se deniega.
-            - Given datos inválidos, When se intenta guardar en Firestore, Then las reglas de validación rechazan el documento.
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un cliente autenticado, When intenta leer datos de sus propias citas, Then tiene acceso. When intenta leer citas de otro cliente, Then se deniega el acceso.
+          - Given un propietario autenticado, When gestiona su negocio, Then puede leer/escribir todos los datos de su negocio. When intenta acceder a datos de otro negocio, Then se deniega.
+          - Given staff autenticado, When accede a las citas de su negocio, Then puede verlas. When intenta modificar datos fuera de su negocio, Then se deniega.
+          - Given datos inválidos, When se intenta guardar en Firestore, Then las reglas de validación rechazan el documento.
 
-            **Errores:**
-            - When un token de autenticación expirado hace una petición, Then Firestore deniega el acceso con error de autenticación.
-            - When se intenta inyectar campos no permitidos, Then las reglas de validación los rechazan.
+          **Errores:**
+          - When un token de autenticación expirado hace una petición, Then Firestore deniega el acceso con error de autenticación.
+          - When se intenta inyectar campos no permitidos, Then las reglas de validación los rechazan.
 
-            **Casos relevantes:**
-            - Usuario con rol múltiple (staff de varios negocios).
-            - Cambio de rol en tiempo real.
+          **Casos relevantes:**
+          - Usuario con rol múltiple (staff de varios negocios).
+          - Cambio de rol en tiempo real.
 
-            ## Tareas técnicas
-            **Firestore Rules:**
-            - Reglas para colección \`users\`: solo el propio usuario puede leer/editar su perfil.
-            - Reglas para colección \`businesses\`: propietario puede gestionar, público puede leer datos básicos.
-            - Reglas para colección \`appointments\`: cliente ve sus citas, staff/owner ve citas de su negocio.
-            - Reglas para colección \`services\`: propietario gestiona, clientes solo lectura.
-            - Reglas para colección \`staff\`: propietario gestiona su staff, staff ve su propio perfil.
-            - Reglas para colección \`reviews\`: cliente crea su propia reseña, todos pueden leer.
-            - Validaciones de tipos de datos (string, number, timestamp, etc.).
-            - Validaciones de campos obligatorios y rangos permitidos.
+          ## Tareas técnicas
+          **Firestore Rules:**
+          - Reglas para colección users: solo el propio usuario puede leer/editar su perfil.
+          - Reglas para colección businesses: propietario puede gestionar, público puede leer datos básicos.
+          - Reglas para colección appointments: cliente ve sus citas, staff/owner ve citas de su negocio.
+          - Reglas para colección services: propietario gestiona, clientes solo lectura.
+          - Reglas para colección staff: propietario gestiona su staff, staff ve su propio perfil.
+          - Reglas para colección reviews: cliente crea su propia reseña, todos pueden leer.
+          - Validaciones de tipos de datos (string, number, timestamp, etc.).
+          - Validaciones de campos obligatorios y rangos permitidos.
 
-            **Cloud Functions:**
-            - Uso de custom claims para verificación de roles en reglas.
-            - Función para asignar/revocar roles (no en cliente).
+          **Cloud Functions:**
+          - Uso de custom claims para verificación de roles en reglas.
+          - Función para asignar/revocar roles (no en cliente).
 
-            **Firebase:**
-            - Firebase App Check para verificar que las peticiones vienen de la app real.
-            - Configuración de reglas en entornos dev/staging/prod separados.
-            - Tests automáticos de Firestore Rules con Firebase Emulator.
+          **Firebase:**
+          - Firebase App Check para verificar que las peticiones vienen de la app real.
+          - Configuración de reglas en entornos dev/staging/prod separados.
+          - Tests automáticos de Firestore Rules con Firebase Emulator.
 
-            ## Consideraciones técnicas
-            - Las reglas de Firestore son la última línea de defensa: deben ser exhaustivas.
-            - Nunca confiar solo en la validación del cliente (Flutter).
-            - Usar custom claims de Firebase Auth para roles (no datos de Firestore en reglas críticas).
-            - Documentar cada regla con su justificación de seguridad.
-            - Revisar reglas en cada release con pruebas de penetración básicas.
+          ## Consideraciones técnicas
+          - Las reglas de Firestore son la última línea de defensa: deben ser exhaustivas.
+          - Nunca confiar solo en la validación del cliente (Flutter).
+          - Usar custom claims de Firebase Auth para roles (no datos de Firestore en reglas críticas).
+          - Documentar cada regla con su justificación de seguridad.
+          - Revisar reglas en cada release con pruebas de penetración básicas.
 
-            ## Edge cases
-            - Usuario con token válido pero cuyo negocio fue eliminado.
-            - Staff revocado intenta acceder con token aún válido.
-            - Ataque de enumeración de IDs de documentos.
-            - Petición con payload extremadamente grande (DoS).
-            - Cambio en estructura de custom claims sin migración de tokens.
+          ## Edge cases
+          - Usuario con token válido pero cuyo negocio fue eliminado.
+          - Staff revocado intenta acceder con token aún válido.
+          - Ataque de enumeración de IDs de documentos.
+          - Petición con payload extremadamente grande (DoS).
+          - Cambio en estructura de custom claims sin migración de tokens.
 
-            ## Prioridad
-            Alta
+          ## Prioridad
+          Alta
 
-            ## Tipo
-            Security`
-            });
-            console.log("✅ Épica: Seguridad (Firestore Rules) creada");
+          ## Tipo
+          Security"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Épica - Manejo offline y sincronización
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Épica: Manejo offline y sincronización",
-              labels: ["enhancement"],
-              body: `## Contexto
-            Implementación de funcionalidad offline-first que permite a los usuarios utilizar las funcionalidades principales de la app sin conexión a internet, sincronizando automáticamente cuando la conectividad se restaura. Crítico para usuarios en zonas con conectividad intermitente.
+        run: |
+          TITLE="Épica: Manejo offline y sincronización"
+          EXISTS=$(gh issue list --repo "$REPO" --search "$TITLE" --json title --jq '.[].title' | grep -F "$TITLE" || true)
+          if [ -z "$EXISTS" ]; then
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --label "enhancement" \
+              --body "## Contexto
+          Implementación de funcionalidad offline-first que permite a los usuarios utilizar las funcionalidades principales de la app sin conexión a internet, sincronizando automáticamente cuando la conectividad se restaura. Crítico para usuarios en zonas con conectividad intermitente.
 
-            ## User Story
-            Como cliente, quiero poder ver mis citas y el catálogo de servicios aunque no tenga internet, para no depender de la conectividad para acceder a información que ya cargué anteriormente.
+          ## User Story
+          Como cliente, quiero poder ver mis citas y el catálogo de servicios aunque no tenga internet, para no depender de la conectividad para acceder a información que ya cargué anteriormente.
 
-            ## Criterios de aceptación
-            **Flujo normal:**
-            - Given un cliente que usó la app con internet, When pierde conectividad, Then puede ver sus citas próximas, historial y catálogo de negocios visitados.
-            - Given la app sin internet, When el usuario realiza una acción que requiere conexión (nueva reserva), Then se le informa claramente que necesita conectividad y se guarda como borrador.
-            - Given conectividad restaurada, When hay datos pendientes de sincronizar, Then la app sincroniza automáticamente en background sin intervención del usuario.
-            - Given un conflicto de datos (mismos datos modificados offline y en servidor), When se sincroniza, Then se aplica una estrategia de resolución clara (last-write-wins o merge).
+          ## Criterios de aceptación
+          **Flujo normal:**
+          - Given un cliente que usó la app con internet, When pierde conectividad, Then puede ver sus citas próximas, historial y catálogo de negocios visitados.
+          - Given la app sin internet, When el usuario realiza una acción que requiere conexión (nueva reserva), Then se le informa claramente que necesita conectividad y se guarda como borrador.
+          - Given conectividad restaurada, When hay datos pendientes de sincronizar, Then la app sincroniza automáticamente en background sin intervención del usuario.
+          - Given un conflicto de datos (mismos datos modificados offline y en servidor), When se sincroniza, Then se aplica una estrategia de resolución clara (last-write-wins o merge).
 
-            **Errores:**
-            - When la sincronización falla parcialmente, Then se reintenta solo la parte fallida, no todo.
-            - When los datos locales están corruptos, Then se recupera desde el servidor sin pérdida de datos críticos.
+          **Errores:**
+          - When la sincronización falla parcialmente, Then se reintenta solo la parte fallida, no todo.
+          - When los datos locales están corruptos, Then se recupera desde el servidor sin pérdida de datos críticos.
 
-            **Casos relevantes:**
-            - Usuario con muy poco almacenamiento local.
-            - Sincronización de grandes cantidades de datos al volver a conectarse.
+          **Casos relevantes:**
+          - Usuario con muy poco almacenamiento local.
+          - Sincronización de grandes cantidades de datos al volver a conectarse.
 
-            ## Tareas técnicas
-            **Flutter:**
-            - Activar persistencia offline de Firestore SDK (\`FirebaseFirestore.instance.settings\`).
-            - Almacenamiento local adicional con Hive o Isar para datos no sincronizados.
-            - Indicador visual de estado de conexión en UI (banner/snackbar).
-            - Cola de operaciones pendientes cuando está offline.
-            - Gestión de conflictos de sincronización con diálogos de resolución.
+          ## Tareas técnicas
+          **Flutter:**
+          - Activar persistencia offline de Firestore SDK.
+          - Almacenamiento local adicional con Hive o Isar para datos no sincronizados.
+          - Indicador visual de estado de conexión en UI (banner/snackbar).
+          - Cola de operaciones pendientes cuando está offline.
+          - Gestión de conflictos de sincronización con diálogos de resolución.
 
-            **Firestore:**
-            - Habilitar persistencia offline en Firestore SDK.
-            - Queries optimizados para funcionar con caché local.
-            - Uso de \`Source.cache\` y \`Source.server\` según disponibilidad.
-            - Límites de caché local (evitar llenar almacenamiento del dispositivo).
+          **Firestore:**
+          - Habilitar persistencia offline en Firestore SDK.
+          - Queries optimizados para funcionar con caché local.
+          - Uso de Source.cache y Source.server según disponibilidad.
+          - Límites de caché local (evitar llenar almacenamiento del dispositivo).
 
-            **Cloud Functions:**
-            - Endpoint de sincronización incremental (delta sync) para reducir transferencia.
-            - Resolución de conflictos en servidor para datos críticos (citas).
-            - Logs de sincronización para auditoría y debugging.
+          **Cloud Functions:**
+          - Endpoint de sincronización incremental (delta sync) para reducir transferencia.
+          - Resolución de conflictos en servidor para datos críticos (citas).
+          - Logs de sincronización para auditoría y debugging.
 
-            **Firebase:**
-            - Configuración de tamaño máximo de caché de Firestore.
-            - Background sync con WorkManager (Android) / BGTaskScheduler (iOS).
+          **Firebase:**
+          - Configuración de tamaño máximo de caché de Firestore.
+          - Background sync con WorkManager (Android) / BGTaskScheduler (iOS).
 
-            ## Consideraciones técnicas
-            - Diseñar el modelo de datos con offline-first en mente desde el principio.
-            - Priorizar datos críticos (citas próximas) sobre datos secundarios (historial antiguo).
-            - Informar siempre al usuario del estado de sus datos (sincronizado/pendiente/error).
-            - Probar en condiciones de red degradada (throttling, pérdida intermitente).
-            - Manejar el límite de almacenamiento del dispositivo.
+          ## Consideraciones técnicas
+          - Diseñar el modelo de datos con offline-first en mente desde el principio.
+          - Priorizar datos críticos (citas próximas) sobre datos secundarios (historial antiguo).
+          - Informar siempre al usuario del estado de sus datos (sincronizado/pendiente/error).
+          - Probar en condiciones de red degradada (throttling, pérdida intermitente).
+          - Manejar el límite de almacenamiento del dispositivo.
 
-            ## Edge cases
-            - Usuario elimina la app offline con datos sin sincronizar.
-            - Dos dispositivos del mismo usuario hacen cambios offline.
-            - Cita reservada offline que ya no está disponible al sincronizar.
-            - Actualización de la app mientras hay datos offline pendientes.
-            - Dispositivo con muy poco espacio de almacenamiento.
+          ## Edge cases
+          - Usuario elimina la app offline con datos sin sincronizar.
+          - Dos dispositivos del mismo usuario hacen cambios offline.
+          - Cita reservada offline que ya no está disponible al sincronizar.
+          - Actualización de la app mientras hay datos offline pendientes.
+          - Dispositivo con muy poco espacio de almacenamiento.
 
-            ## Prioridad
-            Media
+          ## Prioridad
+          Media
 
-            ## Tipo
-            Mobile`
-            });
-            console.log("✅ Épica: Manejo offline y sincronización creada");
+          ## Tipo
+          Mobile"
+            echo "✅ Issue creado: $TITLE"
+          else
+            echo "⏭️  Ya existe: $TITLE"
+          fi
 
       - name: Resumen de issues creados
         run: |
           echo "======================================"
-          echo "✅ Todas las épicas han sido creadas:"
+          echo "✅ Proceso completado"
           echo "======================================"
+          echo "Issues procesados para el proyecto Gazu:"
           echo "1. Épica: Catálogo de servicios"
           echo "2. Épica: Sistema de citas"
           echo "3. Épica: Gestión de staff"
