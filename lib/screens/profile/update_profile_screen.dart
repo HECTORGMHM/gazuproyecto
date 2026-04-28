@@ -40,9 +40,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     setState(() => _loading = true);
 
     final result = await context.read<AuthService>().updateProfile(
-          displayName: _nameController.text.trim().isEmpty
-              ? null
-              : _nameController.text,
+          displayName: _nameController.text,
           photoUrl: _photoUrlController.text.trim().isEmpty
               ? null
               : _photoUrlController.text.trim(),
@@ -73,6 +71,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = context.read<AuthService>().currentUser;
+    // Only use the photo URL if it is a non-empty string.
+    final hasPhoto = user?.photoURL?.isNotEmpty == true;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Actualizar perfil')),
@@ -88,10 +88,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 Center(
                   child: CircleAvatar(
                     radius: 48,
-                    backgroundImage: user?.photoURL != null
-                        ? NetworkImage(user!.photoURL!)
-                        : null,
-                    child: user?.photoURL == null
+                    backgroundImage:
+                        hasPhoto ? NetworkImage(user!.photoURL!) : null,
+                    child: !hasPhoto
                         ? const Icon(Icons.person, size: 48)
                         : null,
                   ),

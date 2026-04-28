@@ -8,6 +8,8 @@ import 'firestore_service.dart';
 /// Possible outcomes of an authentication call.
 enum AuthResult {
   success,
+  canceled,
+  emailNotVerified,
   emailAlreadyInUse,
   wrongPassword,
   userNotFound,
@@ -51,7 +53,8 @@ class AuthService {
 
   /// Registers a new user with [email] and [password].
   ///
-  /// On success the user is also persisted in Firestore.
+  /// On success the user is persisted in Firestore and a verification email
+  /// is sent to their address.
   Future<AuthResult> registerWithEmail({
     required String email,
     required String password,
@@ -64,6 +67,9 @@ class AuthService {
         password: password,
       );
       await credential.user?.updateDisplayName(displayName.trim());
+
+      // Send email verification
+      await credential.user?.sendEmailVerification();
 
       final gazuUser = GazuUser(
         uid: credential.user!.uid,
@@ -84,6 +90,7 @@ class AuthService {
   /// Signs in an existing user with [email] and [password].
   ///
   /// Checks for client-side lockout before calling Firebase.
+  /// After a successful sign-in, blocks unverified accounts.
   Future<AuthResult> signInWithEmail({
     required String email,
     required String password,
@@ -96,6 +103,14 @@ class AuthService {
         email: email.trim(),
         password: password,
       );
+
+      // Block sign-in if the user has not verified their email address.
+      final user = _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await _auth.signOut();
+        return AuthResult.emailNotVerified;
+      }
+
       await _firestoreService.resetLoginAttempts(email);
       return AuthResult.success;
     } on FirebaseAuthException catch (e) {
@@ -113,10 +128,12 @@ class AuthService {
   // ---------------------------------------------------------------------------
 
   /// Signs in (or registers) the user via Google.
+  ///
+  /// Returns [AuthResult.canceled] when the user dismisses the picker.
   Future<AuthResult> signInWithGoogle() async {
     try {
       final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return AuthResult.unknown;
+      if (googleUser == null) return AuthResult.canceled;
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
@@ -139,6 +156,8 @@ class AuthService {
   // ---------------------------------------------------------------------------
 
   /// Signs in (or registers) the user via Apple.
+  ///
+  /// Returns [AuthResult.canceled] when the user dismisses the picker.
   Future<AuthResult> signInWithApple() async {
     try {
       final appleCredential = await SignInWithApple.getAppleIDCredential(
@@ -165,7 +184,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       return _mapFirebaseAuthException(e);
     } on SignInWithAppleAuthorizationException catch (e) {
-      if (e.code == AuthorizationErrorCode.canceled) return AuthResult.unknown;
+      if (e.code == AuthorizationErrorCode.canceled) return AuthResult.canceled;
       return AuthResult.unknown;
     } catch (_) {
       return AuthResult.unknown;
@@ -189,30 +208,56 @@ class AuthService {
   }
 
   // ---------------------------------------------------------------------------
+  // Email verification
+  // ---------------------------------------------------------------------------
+
+  /// Sends an email-verification message to the currently signed-in user.
+  Future<AuthResult> sendEmailVerification() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return AuthResult.unknown;
+      await user.sendEmailVerification();
+      return AuthResult.success;
+    } on FirebaseAuthException catch (e) {
+      return _mapFirebaseAuthException(e);
+    } catch (_) {
+      return AuthResult.unknown;
+    }
+  }
+
+  /// Reloads the Firebase user and returns whether their email is verified.
+  Future<bool> reloadAndCheckEmailVerified() async {
+    try {
+      await _auth.currentUser?.reload();
+      return _auth.currentUser?.emailVerified ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Profile update
   // ---------------------------------------------------------------------------
 
   /// Updates the current user's [displayName] and/or [photoUrl] in both
   /// Firebase Auth and Firestore.
   Future<AuthResult> updateProfile({
-    String? displayName,
+    required String displayName,
     String? photoUrl,
   }) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return AuthResult.unknown;
 
-      if (displayName != null) {
-        await user.updateDisplayName(displayName.trim());
-      }
-      if (photoUrl != null) {
-        await user.updatePhotoURL(photoUrl);
+      await user.updateDisplayName(displayName.trim());
+      if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+        await user.updatePhotoURL(photoUrl.trim());
       }
 
       await _firestoreService.updateUser(
         user.uid,
-        displayName: displayName?.trim(),
-        photoUrl: photoUrl,
+        displayName: displayName.trim(),
+        photoUrl: photoUrl?.trim().isNotEmpty == true ? photoUrl!.trim() : null,
       );
       return AuthResult.success;
     } on FirebaseAuthException catch (e) {
@@ -285,6 +330,11 @@ String authResultMessage(AuthResult result) {
   switch (result) {
     case AuthResult.success:
       return 'Éxito';
+    case AuthResult.canceled:
+      return '';
+    case AuthResult.emailNotVerified:
+      return 'Debes verificar tu correo antes de iniciar sesión. '
+          'Revisa tu bandeja de entrada.';
     case AuthResult.emailAlreadyInUse:
       return 'Este correo ya está registrado. ¿Quieres iniciar sesión?';
     case AuthResult.wrongPassword:

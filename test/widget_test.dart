@@ -4,17 +4,20 @@
 // connection, using lightweight fake AuthService and FirestoreService
 // implementations.
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:gazu/models/user_model.dart';
+import 'package:gazu/screens/auth/email_verification_screen.dart';
 import 'package:gazu/screens/auth/login_screen.dart';
 import 'package:gazu/screens/auth/register_screen.dart';
 import 'package:gazu/screens/auth/forgot_password_screen.dart';
 import 'package:gazu/services/auth_service.dart';
 import 'package:gazu/services/firestore_service.dart';
 import 'package:gazu/utils/validators.dart';
+import 'package:gazu/widgets/password_strength_indicator.dart';
 
 // ---------------------------------------------------------------------------
 // Fake services (no Firebase initialisation required)
@@ -60,7 +63,7 @@ class _FakeAuthService extends AuthService {
       : super(firestoreService: _FakeFirestoreService());
 
   @override
-  Stream<dynamic> get authStateChanges => const Stream.empty();
+  Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
   Future<AuthResult> signInWithEmail({
@@ -89,10 +92,17 @@ class _FakeAuthService extends AuthService {
 
   @override
   Future<AuthResult> updateProfile({
-    String? displayName,
+    required String displayName,
     String? photoUrl,
   }) async =>
       nextResult;
+
+  @override
+  Future<AuthResult> sendEmailVerification() async => nextResult;
+
+  @override
+  Future<bool> reloadAndCheckEmailVerified() async =>
+      nextResult == AuthResult.success;
 
   @override
   Future<void> signOut() async {}
@@ -244,13 +254,65 @@ void main() {
       expect(authResultMessage(AuthResult.success), isNotEmpty);
     });
 
+    test('canceled returns empty string (silent)', () {
+      expect(authResultMessage(AuthResult.canceled), isEmpty);
+    });
+
     test('emailAlreadyInUse returns non-empty string', () {
       expect(authResultMessage(AuthResult.emailAlreadyInUse), isNotEmpty);
+    });
+
+    test('emailNotVerified mentions verification', () {
+      expect(authResultMessage(AuthResult.emailNotVerified),
+          contains('verificar'));
     });
 
     test('lockedOut message mentions minutes', () {
       expect(authResultMessage(AuthResult.lockedOut), contains('minutos'));
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // PasswordStrengthIndicator tests
+  // -------------------------------------------------------------------------
+
+  group('evaluatePasswordStrength', () {
+    test('empty password is empty', () {
+      expect(evaluatePasswordStrength(''), PasswordStrength.empty);
+    });
+
+    test('short simple password is weak', () {
+      expect(evaluatePasswordStrength('abc'), PasswordStrength.weak);
+    });
+
+    test('mixed-case + digits is at least medium', () {
+      final s = evaluatePasswordStrength('Abcdef12');
+      expect(s, anyOf(PasswordStrength.medium, PasswordStrength.strong));
+    });
+
+    test('all criteria met is strong', () {
+      expect(evaluatePasswordStrength('Abcdef1!'), PasswordStrength.strong);
+    });
+  });
+
+  testWidgets('PasswordStrengthIndicator renders nothing for empty password',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+          home: Scaffold(
+              body: PasswordStrengthIndicator(password: ''))),
+    );
+    expect(find.text('Seguridad: Débil'), findsNothing);
+  });
+
+  testWidgets('PasswordStrengthIndicator shows Fuerte for strong password',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+          home: Scaffold(
+              body: PasswordStrengthIndicator(password: 'Abcdef1!'))),
+    );
+    expect(find.text('Seguridad: Fuerte'), findsOneWidget);
   });
 
   // -------------------------------------------------------------------------
@@ -293,6 +355,32 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
+    testWidgets('does NOT show snackbar when Google sign-in is canceled',
+        (tester) async {
+      final auth = _FakeAuthService(nextResult: AuthResult.canceled);
+      await tester.pumpWidget(_wrap(const LoginScreen(), auth: auth));
+
+      await tester.tap(find.byKey(const Key('googleSignInButton')));
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('navigates to EmailVerificationScreen on emailNotVerified',
+        (tester) async {
+      final auth = _FakeAuthService(nextResult: AuthResult.emailNotVerified);
+      await tester.pumpWidget(_wrap(const LoginScreen(), auth: auth));
+
+      await tester.enterText(
+          find.byKey(const Key('loginEmailField')), 'user@test.com');
+      await tester.enterText(
+          find.byKey(const Key('loginPasswordField')), 'Password1');
+      await tester.tap(find.byKey(const Key('loginButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EmailVerificationScreen), findsOneWidget);
+    });
+
     testWidgets('navigates to RegisterScreen on tap', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.tap(find.byKey(const Key('goToRegisterButton')));
@@ -306,7 +394,8 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('RegisterScreen', () {
-    testWidgets('renders all form fields', (tester) async {
+    testWidgets('renders all form fields and strength indicator placeholder',
+        (tester) async {
       await tester.pumpWidget(_wrap(const RegisterScreen()));
       expect(find.byKey(const Key('registerNameField')), findsOneWidget);
       expect(find.byKey(const Key('registerEmailField')), findsOneWidget);
@@ -314,6 +403,32 @@ void main() {
       expect(find.byKey(const Key('registerConfirmPasswordField')),
           findsOneWidget);
       expect(find.byKey(const Key('registerButton')), findsOneWidget);
+    });
+
+    testWidgets('shows strength indicator after typing password', (tester) async {
+      await tester.pumpWidget(_wrap(const RegisterScreen()));
+      await tester.enterText(
+          find.byKey(const Key('registerPasswordField')), 'Abcdef1!');
+      await tester.pump();
+      expect(find.byType(PasswordStrengthIndicator), findsOneWidget);
+      expect(find.text('Seguridad: Fuerte'), findsOneWidget);
+    });
+
+    testWidgets('navigates to EmailVerificationScreen after success',
+        (tester) async {
+      final auth = _FakeAuthService(nextResult: AuthResult.success);
+      await tester.pumpWidget(_wrap(const RegisterScreen(), auth: auth));
+      await tester.enterText(
+          find.byKey(const Key('registerNameField')), 'Test User');
+      await tester.enterText(
+          find.byKey(const Key('registerEmailField')), 'test@test.com');
+      await tester.enterText(
+          find.byKey(const Key('registerPasswordField')), 'Password1');
+      await tester.enterText(
+          find.byKey(const Key('registerConfirmPasswordField')), 'Password1');
+      await tester.tap(find.byKey(const Key('registerButton')));
+      await tester.pumpAndSettle();
+      expect(find.byType(EmailVerificationScreen), findsOneWidget);
     });
 
     testWidgets('shows mismatch error when passwords differ', (tester) async {
@@ -376,6 +491,33 @@ void main() {
       await tester.tap(find.byKey(const Key('sendResetEmailButton')));
       await tester.pump();
       expect(find.text('¡Correo enviado!'), findsOneWidget);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // EmailVerificationScreen widget tests
+  // -------------------------------------------------------------------------
+
+  group('EmailVerificationScreen', () {
+    testWidgets('renders verification buttons', (tester) async {
+      await tester.pumpWidget(_wrap(
+        const EmailVerificationScreen(email: 'test@test.com'),
+      ));
+      expect(find.byKey(const Key('checkVerificationButton')), findsOneWidget);
+      expect(
+          find.byKey(const Key('resendVerificationButton')), findsOneWidget);
+    });
+
+    testWidgets('shows unverified snackbar when not yet verified',
+        (tester) async {
+      final auth = _FakeAuthService(nextResult: AuthResult.unknown);
+      await tester.pumpWidget(_wrap(
+        const EmailVerificationScreen(email: 'test@test.com'),
+        auth: auth,
+      ));
+      await tester.tap(find.byKey(const Key('checkVerificationButton')));
+      await tester.pump();
+      expect(find.byType(SnackBar), findsOneWidget);
     });
   });
 }

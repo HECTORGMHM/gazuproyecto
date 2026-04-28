@@ -14,7 +14,13 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = context.read<AuthService>();
     final firestoreService = context.read<FirestoreService>();
-    final firebaseUser = authService.currentUser!;
+    final firebaseUser = authService.currentUser;
+
+    if (firebaseUser == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return StreamBuilder<GazuUser?>(
       stream: firestoreService.userStream(firebaseUser.uid),

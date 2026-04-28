@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../utils/validators.dart';
+import '../../widgets/password_strength_indicator.dart';
+import 'email_verification_screen.dart';
 
 /// Registration screen for new users.
 class RegisterScreen extends StatefulWidget {
@@ -22,6 +24,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  String _currentPassword = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(() {
+      setState(() => _currentPassword = _passwordController.text);
+    });
+  }
 
   @override
   void dispose() {
@@ -46,8 +57,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = false);
 
     if (result == AuthResult.success) {
-      // Pop back – AuthWrapper will redirect to HomeScreen.
-      Navigator.of(context).pop();
+      // Replace registration screen with the email verification screen.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(
+            email: _emailController.text.trim(),
+          ),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -128,6 +145,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: Validators.password,
                 ),
+
+                // Password strength indicator (live)
+                PasswordStrengthIndicator(password: _currentPassword),
                 const SizedBox(height: 16),
 
                 // Confirm password

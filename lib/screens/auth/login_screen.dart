@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../utils/validators.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'email_verification_screen.dart';
 
 /// Login screen supporting email/password, Google and Apple sign-in.
 class LoginScreen extends StatefulWidget {
@@ -40,6 +41,19 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
 
+    if (result == AuthResult.emailNotVerified) {
+      // Navigate to verification screen so the user can re-send or check.
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(
+            email: _emailController.text.trim(),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (result != AuthResult.success) {
       _showError(authResultMessage(result));
     }
@@ -50,6 +64,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final result = await context.read<AuthService>().signInWithGoogle();
     if (!mounted) return;
     setState(() => _loading = false);
+    // Silently ignore user-initiated cancellations.
+    if (result == AuthResult.canceled) return;
     if (result != AuthResult.success) {
       _showError(authResultMessage(result));
     }
@@ -60,6 +76,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final result = await context.read<AuthService>().signInWithApple();
     if (!mounted) return;
     setState(() => _loading = false);
+    // Silently ignore user-initiated cancellations.
+    if (result == AuthResult.canceled) return;
     if (result != AuthResult.success) {
       _showError(authResultMessage(result));
     }
@@ -198,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Apple (shown on all platforms; can be gated on iOS/macOS)
+                // Apple
                 OutlinedButton.icon(
                   key: const Key('appleSignInButton'),
                   onPressed: _loading ? null : _signInWithApple,

@@ -78,23 +78,28 @@ export const beforeSignIn = functions.auth
 export const onUserCreated = functions.auth.user().onCreate(async (user) => {
   const { uid, email, displayName, photoURL } = user;
 
-  await db
-    .collection("users")
-    .doc(uid)
-    .set(
-      {
-        email: email ?? "",
-        displayName: displayName ?? "Usuario",
-        photoUrl: photoURL ?? null,
-        role: "user",
-        isActive: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: null,
-      },
-      { merge: true }
-    );
+  const userRef = db.collection("users").doc(uid);
 
-  functions.logger.info(`User document created for ${uid}`);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+
+    // Only create the document if the Flutter app hasn't already done so.
+    if (snap.exists) {
+      return;
+    }
+
+    tx.set(userRef, {
+      email: email ?? "",
+      displayName: displayName ?? "Usuario",
+      photoUrl: photoURL ?? null,
+      role: "user",
+      isActive: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: null,
+    });
+  });
+
+  functions.logger.info(`User document ensured for ${uid}`);
 });
 
 // ---------------------------------------------------------------------------

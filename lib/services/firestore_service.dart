@@ -104,7 +104,7 @@ class FirestoreService {
         .get();
     if (!snap.exists) return false;
     final data = snap.data()!;
-    final count = data['count'] as int? ?? 0;
+    final count = (data['count'] as num?)?.toInt() ?? 0;
     if (count < kMaxFailedLoginAttempts) return false;
     final lastAttempt =
         (data['lastAttempt'] as Timestamp?)?.toDate() ?? DateTime.now();
