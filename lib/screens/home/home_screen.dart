@@ -149,14 +149,16 @@ class _RoleContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (role) {
-      UserRole.business => _BusinessPanel(),
-      UserRole.staff => _StaffPanel(),
-      UserRole.user => _UserPanel(),
+      UserRole.business => const _BusinessPanel(),
+      UserRole.staff => const _StaffPanel(),
+      UserRole.user => const _UserPanel(),
     };
   }
 }
 
 class _UserPanel extends StatelessWidget {
+  const _UserPanel();
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -182,6 +184,8 @@ class _UserPanel extends StatelessWidget {
 }
 
 class _StaffPanel extends StatelessWidget {
+  const _StaffPanel();
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -202,6 +206,8 @@ class _StaffPanel extends StatelessWidget {
 }
 
 class _BusinessPanel extends StatelessWidget {
+  const _BusinessPanel();
+
   @override
   Widget build(BuildContext context) {
     return ListView(

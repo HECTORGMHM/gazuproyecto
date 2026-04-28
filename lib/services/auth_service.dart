@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
+import '../utils/constants.dart';
 import 'firestore_service.dart';
 
 /// Possible outcomes of an authentication call.
@@ -303,6 +304,3 @@ String authResultMessage(AuthResult result) {
       return 'Ocurrió un error inesperado. Inténtalo de nuevo.';
   }
 }
-
-// Re-export the lockout constant for convenience.
-const int kLockoutDurationMinutes = 15;
