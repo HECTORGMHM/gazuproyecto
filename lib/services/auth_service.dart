@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
@@ -129,9 +130,21 @@ class AuthService {
 
   /// Signs in (or registers) the user via Google.
   ///
+  /// On web, uses Firebase Auth's [signInWithPopup] to avoid the need for a
+  /// separate Google Sign-In client ID. On other platforms, the [GoogleSignIn]
+  /// package flow is used instead.
+  ///
   /// Returns [AuthResult.canceled] when the user dismisses the picker.
   Future<AuthResult> signInWithGoogle() async {
     try {
+      if (kIsWeb) {
+        final googleProvider = GoogleAuthProvider();
+        final userCredential = await _auth.signInWithPopup(googleProvider);
+        await _ensureFirestoreUser(userCredential.user!);
+        return AuthResult.success;
+      }
+
+      // Mobile / desktop flow via google_sign_in package.
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return AuthResult.canceled;
 
@@ -145,6 +158,10 @@ class AuthService {
       await _ensureFirestoreUser(userCredential.user!);
       return AuthResult.success;
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request') {
+        return AuthResult.canceled;
+      }
       return _mapFirebaseAuthException(e);
     } catch (_) {
       return AuthResult.unknown;
@@ -157,9 +174,22 @@ class AuthService {
 
   /// Signs in (or registers) the user via Apple.
   ///
+  /// On web, uses Firebase Auth's [signInWithPopup] because the
+  /// `sign_in_with_apple` native package is not supported on web.
+  ///
   /// Returns [AuthResult.canceled] when the user dismisses the picker.
   Future<AuthResult> signInWithApple() async {
     try {
+      if (kIsWeb) {
+        final appleProvider = OAuthProvider('apple.com')
+          ..addScope('email')
+          ..addScope('name');
+        final userCredential = await _auth.signInWithPopup(appleProvider);
+        await _ensureFirestoreUser(userCredential.user!);
+        return AuthResult.success;
+      }
+
+      // Mobile / desktop flow via sign_in_with_apple package.
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
@@ -182,6 +212,10 @@ class AuthService {
       );
       return AuthResult.success;
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request') {
+        return AuthResult.canceled;
+      }
       return _mapFirebaseAuthException(e);
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) return AuthResult.canceled;
