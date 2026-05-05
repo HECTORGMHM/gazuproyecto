@@ -204,7 +204,7 @@ class _ServiceRegistrationScreenState
           final businesses = snapshot.data ?? [];
 
           if (businesses.isEmpty) {
-            return _NoBusinessPlaceholder();
+            return const _NoBusinessPlaceholder();
           }
 
           return Theme(
@@ -513,6 +513,7 @@ class _ServiceRegistrationScreenState
 // ---------------------------------------------------------------------------
 
 class _NoBusinessPlaceholder extends StatelessWidget {
+  const _NoBusinessPlaceholder();
   @override
   Widget build(BuildContext context) {
     return Center(
