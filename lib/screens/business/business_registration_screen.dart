@@ -117,8 +117,9 @@ class _BusinessRegistrationScreenState
 
   Future<String?> _uploadLogo(String ownerId) async {
     if (_logoFile == null) return null;
+    final ext = _logoFile!.path.split('.').last.toLowerCase();
     final ref = FirebaseStorage.instance
-        .ref('negocios/$ownerId/${DateTime.now().millisecondsSinceEpoch}.jpg');
+        .ref('negocios/$ownerId/${DateTime.now().millisecondsSinceEpoch}.$ext');
     await ref.putFile(_logoFile!);
     return ref.getDownloadURL();
   }

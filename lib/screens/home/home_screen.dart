@@ -91,7 +91,7 @@ class HomeScreen extends StatelessWidget {
           const Divider(height: 32),
 
           // Role-specific content
-          Expanded(child: _RoleContent(role: role, gazuUser: user)),
+          Expanded(child: _RoleContent(role: role)),
         ],
       ),
     );
@@ -152,10 +152,8 @@ class _RoleBadge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _RoleContent extends StatelessWidget {
-  const _RoleContent({required this.role, this.gazuUser});
+  const _RoleContent({required this.role});
   final UserRole role;
-  // ignore: unused_field - kept for future role-specific personalisation
-  final GazuUser? gazuUser;
 
   @override
   Widget build(BuildContext context) {
