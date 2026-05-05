@@ -41,35 +41,36 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // TODO: Replace the placeholder values below with your real Firebase config.
-  // Run `flutterfire configure` in the project root to generate this file
-  // automatically from your Firebase project.
-  // ---------------------------------------------------------------------------
-
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: 'YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyAP1AStvMrRMFHLWEcOC_gsjcFw8xQJ_u8',
+    appId: '1:151949139234:web:58aa3ee81722541738d97b',
+    messagingSenderId: '151949139234',
+    projectId: 'gazuproyecto',
+    authDomain: 'gazuproyecto.firebaseapp.com',
+    storageBucket: 'gazuproyecto.firebasestorage.app',
+    measurementId: 'G-X2K49BDYJE',
   );
+
+  // ---------------------------------------------------------------------------
+  // TODO: Replace placeholder values below with your platform-specific configs.
+  // Run `flutterfire configure` in the project root to generate them
+  // automatically, or copy the values from google-services.json / GoogleService-Info.plist.
+  // ---------------------------------------------------------------------------
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'YOUR_ANDROID_API_KEY',
     appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    messagingSenderId: '151949139234',
+    projectId: 'gazuproyecto',
+    storageBucket: 'gazuproyecto.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'YOUR_IOS_API_KEY',
     appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    messagingSenderId: '151949139234',
+    projectId: 'gazuproyecto',
+    storageBucket: 'gazuproyecto.firebasestorage.app',
     iosClientId: 'YOUR_IOS_CLIENT_ID',
     iosBundleId: 'com.example.gazu',
   );
@@ -77,19 +78,19 @@ class DefaultFirebaseOptions {
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'YOUR_MACOS_API_KEY',
     appId: 'YOUR_MACOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    messagingSenderId: '151949139234',
+    projectId: 'gazuproyecto',
+    storageBucket: 'gazuproyecto.firebasestorage.app',
     iosClientId: 'YOUR_MACOS_CLIENT_ID',
     iosBundleId: 'com.example.gazu',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'YOUR_WINDOWS_API_KEY',
+    apiKey: 'AIzaSyAP1AStvMrRMFHLWEcOC_gsjcFw8xQJ_u8',
     appId: 'YOUR_WINDOWS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    messagingSenderId: '151949139234',
+    projectId: 'gazuproyecto',
+    authDomain: 'gazuproyecto.firebaseapp.com',
+    storageBucket: 'gazuproyecto.firebasestorage.app',
   );
 }
