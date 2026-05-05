@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/business_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
 
@@ -15,6 +16,9 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _usersRef =>
       _firestore.collection(AppCollections.users);
+
+  CollectionReference<Map<String, dynamic>> get _negociosRef =>
+      _firestore.collection(AppCollections.negocios);
 
   // ---------------------------------------------------------------------------
   // User CRUD
@@ -120,4 +124,64 @@ class FirestoreService {
         .doc(email.toLowerCase().trim())
         .delete();
   }
+
+  // ---------------------------------------------------------------------------
+  // Business CRUD (issue #2 – Gestión de negocios / Alta de Negocio)
+  // ---------------------------------------------------------------------------
+
+  /// Creates a new document in the `/negocios/` collection and returns its id.
+  ///
+  /// Also marks the owner's user document with `hasBusiness: true`.
+  Future<String> createBusiness(GazuBusiness business) async {
+    final docRef = await _negociosRef.add(business.toFirestore());
+    await _markUserHasBusiness(business.ownerId, value: true);
+    return docRef.id;
+  }
+
+  /// Retrieves a [GazuBusiness] by [id]. Returns `null` if not found.
+  Future<GazuBusiness?> getBusiness(String id) async {
+    final doc = await _negociosRef.doc(id).get();
+    if (!doc.exists) return null;
+    return GazuBusiness.fromFirestore(doc);
+  }
+
+  /// Updates only the provided fields for the business with [id].
+  Future<void> updateBusiness(
+    String id, {
+    String? nombre,
+    String? categoria,
+    String? logoUrl,
+    Map<String, Map<String, String>>? horarios,
+  }) async {
+    final updates = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (nombre != null) 'nombre': nombre,
+      if (categoria != null) 'categoria': categoria,
+      if (logoUrl != null) 'logoUrl': logoUrl,
+      if (horarios != null)
+        'horarios': horarios.map((day, times) => MapEntry(day, times)),
+    };
+    await _negociosRef.doc(id).update(updates);
+  }
+
+  /// Streams real-time updates for businesses owned by [ownerId].
+  Stream<List<GazuBusiness>> businessesStream(String ownerId) {
+    return _negociosRef
+        .where('ownerId', isEqualTo: ownerId)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map(GazuBusiness.fromFirestore).toList());
+  }
+
+  /// Sets `hasBusiness` flag on the user document.
+  Future<void> _markUserHasBusiness(String uid, {required bool value}) async {
+    await _usersRef.doc(uid).update({
+      'hasBusiness': value,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Publicly exposed wrapper so [ProfileSwitcher] can toggle the flag.
+  Future<void> setUserHasBusiness(String uid, {required bool value}) =>
+      _markUserHasBusiness(uid, value: value);
 }
