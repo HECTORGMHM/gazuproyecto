@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/profile_switcher.dart';
+import '../business/business_dashboard_screen.dart';
+import '../business/business_registration_screen.dart';
+import '../business/service_registration_screen.dart';
 import '../profile/update_profile_screen.dart';
 
 /// Home screen that adapts its content based on the current user's [UserRole].
@@ -163,27 +167,30 @@ class _RoleContent extends StatelessWidget {
 }
 
 class _UserPanel extends StatelessWidget {
-  const _UserPanel();
+  const _UserPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      children: const [
-        _HomeCard(
+      children: [
+        const _HomeCard(
           icon: Icons.search,
           title: 'Explorar negocios',
           subtitle: 'Encuentra servicios cerca de ti',
         ),
-        _HomeCard(
+        const _HomeCard(
           icon: Icons.calendar_today,
           title: 'Mis reservas',
           subtitle: 'Consulta y gestiona tus citas',
         ),
-        _HomeCard(
+        const _HomeCard(
           icon: Icons.favorite_outline,
           title: 'Favoritos',
           subtitle: 'Negocios y servicios guardados',
         ),
+        const Divider(),
+        // Profile Switcher – navigate to business registration or dashboard.
+        const ProfileSwitcher(),
       ],
     );
   }
@@ -217,26 +224,50 @@ class _BusinessPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      children: const [
+      children: [
         _HomeCard(
           icon: Icons.storefront,
           title: 'Mi negocio',
           subtitle: 'Gestiona información y servicios',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (_) => const BusinessDashboardScreen()),
+          ),
         ),
         _HomeCard(
+          icon: Icons.design_services_outlined,
+          title: 'Alta de Servicios',
+          subtitle: 'Agrega servicios a tu negocio',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (_) => const ServiceRegistrationScreen()),
+          ),
+        ),
+        const _HomeCard(
           icon: Icons.group,
           title: 'Equipo / Staff',
           subtitle: 'Administra tu personal',
         ),
-        _HomeCard(
+        const _HomeCard(
           icon: Icons.bar_chart,
           title: 'Reportes',
           subtitle: 'Estadísticas y métricas del negocio',
         ),
-        _HomeCard(
+        const _HomeCard(
           icon: Icons.settings,
           title: 'Configuración',
           subtitle: 'Ajustes de la cuenta y del negocio',
+        ),
+        const Divider(),
+        // Allow business owner to register an additional business.
+        ListTile(
+          leading: const Icon(Icons.add_business_outlined),
+          title: const Text('Registrar otro negocio'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (_) => const BusinessRegistrationScreen()),
+          ),
         ),
       ],
     );
@@ -248,10 +279,12 @@ class _HomeCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +299,7 @@ class _HomeCard extends StatelessWidget {
         title: Text(title),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap ?? () {},
       ),
     );
   }

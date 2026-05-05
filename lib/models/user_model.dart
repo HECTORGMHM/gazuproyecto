@@ -45,6 +45,8 @@ class GazuUser {
   final String? photoUrl;
   final UserRole role;
   final bool isActive;
+  /// `true` once the user has registered at least one business (issue #2).
+  final bool hasBusiness;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -55,6 +57,7 @@ class GazuUser {
     this.photoUrl,
     this.role = UserRole.user,
     this.isActive = true,
+    this.hasBusiness = false,
     required this.createdAt,
     this.updatedAt,
   });
@@ -69,6 +72,7 @@ class GazuUser {
       photoUrl: data['photoUrl'] as String?,
       role: UserRoleX.fromString(data['role'] as String?),
       isActive: data['isActive'] as bool? ?? true,
+      hasBusiness: data['hasBusiness'] as bool? ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -82,6 +86,7 @@ class GazuUser {
       if (photoUrl != null) 'photoUrl': photoUrl,
       'role': role.name,
       'isActive': isActive,
+      'hasBusiness': hasBusiness,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
@@ -92,6 +97,7 @@ class GazuUser {
     String? photoUrl,
     UserRole? role,
     bool? isActive,
+    bool? hasBusiness,
     DateTime? updatedAt,
   }) {
     return GazuUser(
@@ -101,6 +107,7 @@ class GazuUser {
       photoUrl: photoUrl ?? this.photoUrl,
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
+      hasBusiness: hasBusiness ?? this.hasBusiness,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

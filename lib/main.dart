@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
+import 'utils/constants.dart';
 import 'widgets/auth_wrapper.dart';
 
 Future<void> main() async {
@@ -32,7 +33,10 @@ class GazuApp extends StatelessWidget {
         title: 'Gazu',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(AppColors.primaryOrange),
+          ),
+          scaffoldBackgroundColor: const Color(AppColors.scaffoldCharcoal),
           useMaterial3: true,
         ),
         home: const AuthWrapper(),

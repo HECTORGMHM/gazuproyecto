@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:gazu/models/business_model.dart';
 import 'package:gazu/models/user_model.dart';
 import 'package:gazu/screens/auth/email_verification_screen.dart';
 import 'package:gazu/screens/auth/login_screen.dart';
@@ -53,6 +54,20 @@ class _FakeFirestoreService extends FirestoreService {
 
   @override
   Future<void> resetLoginAttempts(String email) async {}
+
+  // Business stubs – avoid real Firestore calls if triggered in widget tests.
+  @override
+  Future<String> createBusiness(GazuBusiness business) async => 'fake-id';
+
+  @override
+  Future<GazuBusiness?> getBusiness(String id) async => null;
+
+  @override
+  Stream<List<GazuBusiness>> businessesStream(String ownerId) =>
+      Stream.value([]);
+
+  @override
+  Future<void> setUserHasBusiness(String uid, {required bool value}) async {}
 }
 
 /// Fake [AuthService] that overrides all auth methods to avoid Firebase calls.
@@ -491,6 +506,104 @@ void main() {
       await tester.tap(find.byKey(const Key('sendResetEmailButton')));
       await tester.pump();
       expect(find.text('¡Correo enviado!'), findsOneWidget);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // GazuBusiness model tests (issue #2 – Alta de Negocio)
+  // -------------------------------------------------------------------------
+
+  group('GazuBusiness', () {
+    final base = GazuBusiness(
+      ownerId: 'owner123',
+      nombre: 'Barbería El Tigre',
+      categoria: 'Barbería',
+      horarios: {
+        'lunes': {'open': '09:00', 'close': '18:00'},
+      },
+      createdAt: DateTime(2024),
+    );
+
+    test('default status is pending', () {
+      expect(base.status, BusinessStatus.pending);
+    });
+
+    test('toFirestore map contains expected keys', () {
+      final map = base.toFirestore();
+      expect(map['ownerId'], 'owner123');
+      expect(map['nombre'], 'Barbería El Tigre');
+      expect(map['categoria'], 'Barbería');
+      expect(map['status'], 'pending');
+    });
+
+    test('copyWith changes nombre', () {
+      final updated = base.copyWith(nombre: 'Peluquería Moderna');
+      expect(updated.nombre, 'Peluquería Moderna');
+      expect(updated.ownerId, base.ownerId);
+    });
+
+    test('copyWith changes status', () {
+      final updated = base.copyWith(status: BusinessStatus.active);
+      expect(updated.status, BusinessStatus.active);
+    });
+  });
+
+  group('BusinessStatus', () {
+    test('fromString returns pending by default', () {
+      expect(BusinessStatusX.fromString(null), BusinessStatus.pending);
+      expect(BusinessStatusX.fromString('unknown'), BusinessStatus.pending);
+    });
+
+    test('fromString returns active', () {
+      expect(BusinessStatusX.fromString('active'), BusinessStatus.active);
+    });
+
+    test('fromString returns inactive', () {
+      expect(BusinessStatusX.fromString('inactive'), BusinessStatus.inactive);
+    });
+
+    test('value property returns correct strings', () {
+      expect(BusinessStatus.pending.value, 'pending');
+      expect(BusinessStatus.active.value, 'active');
+      expect(BusinessStatus.inactive.value, 'inactive');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // GazuUser hasBusiness field tests
+  // -------------------------------------------------------------------------
+
+  group('GazuUser hasBusiness', () {
+    test('defaults to false', () {
+      final user = GazuUser(
+        uid: 'u1',
+        email: 'x@x.com',
+        displayName: 'X',
+        createdAt: DateTime(2024),
+      );
+      expect(user.hasBusiness, isFalse);
+    });
+
+    test('copyWith can set hasBusiness to true', () {
+      final user = GazuUser(
+        uid: 'u1',
+        email: 'x@x.com',
+        displayName: 'X',
+        createdAt: DateTime(2024),
+      );
+      final updated = user.copyWith(hasBusiness: true);
+      expect(updated.hasBusiness, isTrue);
+    });
+
+    test('toFirestore includes hasBusiness', () {
+      final user = GazuUser(
+        uid: 'u1',
+        email: 'x@x.com',
+        displayName: 'X',
+        hasBusiness: true,
+        createdAt: DateTime(2024),
+      );
+      expect(user.toFirestore()['hasBusiness'], isTrue);
     });
   });
 
