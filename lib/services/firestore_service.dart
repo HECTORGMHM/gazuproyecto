@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/business_model.dart';
+import '../models/service_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
 
@@ -184,4 +185,53 @@ class FirestoreService {
   /// Publicly exposed wrapper so [ProfileSwitcher] can toggle the flag.
   Future<void> setUserHasBusiness(String uid, {required bool value}) =>
       _markUserHasBusiness(uid, value: value);
+
+  // ---------------------------------------------------------------------------
+  // Service CRUD (subcollection /negocios/{businessId}/servicios)
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> _serviciosRef(String businessId) =>
+      _negociosRef.doc(businessId).collection(AppCollections.servicios);
+
+  /// Creates a new service document under the given business.
+  /// Returns the new document id.
+  Future<String> createService(GazuService service) async {
+    final docRef = await _serviciosRef(service.businessId).add(service.toFirestore());
+    return docRef.id;
+  }
+
+  /// Streams real-time updates for all services of [businessId].
+  Stream<List<GazuService>> servicesStream(String businessId) {
+    return _serviciosRef(businessId).snapshots().map(
+          (snap) => snap.docs.map(GazuService.fromFirestore).toList(),
+        );
+  }
+
+  /// Updates editable fields for an existing service.
+  Future<void> updateService(
+    String businessId,
+    String serviceId, {
+    String? nombre,
+    String? descripcion,
+    double? precio,
+    int? duracion,
+    String? categoria,
+    bool? isActive,
+  }) async {
+    final updates = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (nombre != null) 'nombre': nombre,
+      if (descripcion != null) 'descripcion': descripcion,
+      if (precio != null) 'precio': precio,
+      if (duracion != null) 'duracion': duracion,
+      if (categoria != null) 'categoria': categoria,
+      if (isActive != null) 'isActive': isActive,
+    };
+    await _serviciosRef(businessId).doc(serviceId).update(updates);
+  }
+
+  /// Deletes a service document.
+  Future<void> deleteService(String businessId, String serviceId) async {
+    await _serviciosRef(businessId).doc(serviceId).delete();
+  }
 }

@@ -7,6 +7,8 @@ class AppCollections {
   /// The product spec names this collection 'negocios'.
   static const String negocios = 'negocios';
   static const String staff = 'staff';
+  /// Subcollection under each negocio document for its offered services.
+  static const String servicios = 'servicios';
 }
 
 /// Brand colours shared across the Alta de Negocio flow.

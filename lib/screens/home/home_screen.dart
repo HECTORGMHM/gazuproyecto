@@ -7,6 +7,7 @@ import '../../services/firestore_service.dart';
 import '../../widgets/profile_switcher.dart';
 import '../business/business_dashboard_screen.dart';
 import '../business/business_registration_screen.dart';
+import '../business/service_registration_screen.dart';
 import '../profile/update_profile_screen.dart';
 
 /// Home screen that adapts its content based on the current user's [UserRole].
@@ -231,6 +232,15 @@ class _BusinessPanel extends StatelessWidget {
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
                 builder: (_) => const BusinessDashboardScreen()),
+          ),
+        ),
+        _HomeCard(
+          icon: Icons.design_services_outlined,
+          title: 'Alta de Servicios',
+          subtitle: 'Agrega servicios a tu negocio',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (_) => const ServiceRegistrationScreen()),
           ),
         ),
         const _HomeCard(
