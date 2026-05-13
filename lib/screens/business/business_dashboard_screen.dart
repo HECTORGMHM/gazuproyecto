@@ -284,6 +284,7 @@ class _BusinessCardState extends State<_BusinessCard> {
 
   Future<void> _handleMasterSwitch(
       BuildContext context, String businessId, bool enabled) async {
+    if (_updatingMasterSwitch) return;
     final firestoreService = context.read<FirestoreService>();
     setState(() => _updatingMasterSwitch = true);
     try {
