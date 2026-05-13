@@ -19,6 +19,9 @@ const MAX_FAILED_ATTEMPTS = 5;
 /** Lockout window in milliseconds (15 minutes). */
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 
+/** Safe write chunk size to stay under Firestore 500-op batch limit. */
+const FIRESTORE_BATCH_CHUNK_SIZE = 400;
+
 // ---------------------------------------------------------------------------
 // beforeSignIn blocking function
 // ---------------------------------------------------------------------------
@@ -164,11 +167,9 @@ export const onBusinessStatusChanged = functions.firestore
     }
 
     const docs = servicesSnap.docs;
-    const chunkSize = 400;
-
-    for (let i = 0; i < docs.length; i += chunkSize) {
+    for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_CHUNK_SIZE) {
       const batch = db.batch();
-      const chunk = docs.slice(i, i + chunkSize);
+      const chunk = docs.slice(i, i + FIRESTORE_BATCH_CHUNK_SIZE);
 
       for (const doc of chunk) {
         batch.update(doc.ref, {

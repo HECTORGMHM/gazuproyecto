@@ -175,8 +175,8 @@ class _BusinessCardState extends State<_BusinessCard> {
               ),
               trailing: Chip(
                 label: Text(statusLabel, style: const TextStyle(fontSize: 11)),
-                backgroundColor: statusColor.withAlpha(40),
-                side: BorderSide(color: statusColor.withAlpha(100)),
+                backgroundColor: statusColor.withOpacity(0.16),
+                side: BorderSide(color: statusColor.withOpacity(0.39)),
                 labelStyle: TextStyle(color: statusColor),
                 padding: EdgeInsets.zero,
               ),
