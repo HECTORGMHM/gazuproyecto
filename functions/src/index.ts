@@ -167,8 +167,8 @@ export const onBusinessStatusChanged = functions.firestore
     }
 
     const docs = servicesSnap.docs;
-    // Firestore batches support up to 500 writes, so we use 400 per chunk
-    // to keep headroom and avoid limit issues on future update expansion.
+    // Firestore batches support up to 500 writes. We use 400 to keep a 100-write
+    // safety margin for future metadata writes and avoid edge-limit failures.
     for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_CHUNK_SIZE) {
       const batch = db.batch();
       const chunk = docs.slice(i, i + FIRESTORE_BATCH_CHUNK_SIZE);

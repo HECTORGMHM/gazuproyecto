@@ -319,7 +319,7 @@ class _BusinessCardState extends State<_BusinessCard> {
         title: const Text('Cerrar temporalmente'),
         content: TextField(
           controller: controller,
-          maxLength: 120,
+          maxLength: 280,
           decoration: const InputDecoration(
             labelText: 'Razón (opcional)',
             hintText: 'Ej. mantenimiento, evento privado...',

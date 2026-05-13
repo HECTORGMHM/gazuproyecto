@@ -347,7 +347,7 @@ class _BusinessRegistrationScreenState
               ),
               validator: (v) {
                 if (v != null && v.trim().length > 280) {
-                  return 'Máximo 280 caracteres';
+                  return 'Máximo 280 caracteres (actualmente: ${v.trim().length})';
                 }
                 return null;
               },
