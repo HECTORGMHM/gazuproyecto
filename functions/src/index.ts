@@ -125,3 +125,62 @@ export const onUserDeleted = functions.auth.user().onDelete(async (user) => {
   await batch.commit();
   functions.logger.info(`Cleaned up data for deleted user ${uid}`);
 });
+
+// ---------------------------------------------------------------------------
+// Business Master Switch propagation (issue #2 – Gestión de negocios)
+// ---------------------------------------------------------------------------
+
+/**
+ * Propagates business Master Switch changes to all services under:
+ * `/negocios/{businessId}/servicios/{serviceId}`.
+ *
+ * - If business status becomes `inactive`, all services are disabled.
+ * - If business status becomes `active`, all services are re-enabled.
+ */
+export const onBusinessStatusChanged = functions.firestore
+  .document("negocios/{businessId}")
+  .onUpdate(async (change, context) => {
+    const beforeStatus = change.before.get("status") as string | undefined;
+    const afterStatus = change.after.get("status") as string | undefined;
+
+    if (beforeStatus === afterStatus) {
+      return;
+    }
+
+    if (afterStatus !== "active" && afterStatus !== "inactive") {
+      return;
+    }
+
+    const businessId = context.params.businessId as string;
+    const shouldActivateServices = afterStatus === "active";
+    const servicesRef = db
+      .collection("negocios")
+      .doc(businessId)
+      .collection("servicios");
+
+    const servicesSnap = await servicesRef.get();
+    if (servicesSnap.empty) {
+      return;
+    }
+
+    const docs = servicesSnap.docs;
+    const chunkSize = 400;
+
+    for (let i = 0; i < docs.length; i += chunkSize) {
+      const batch = db.batch();
+      const chunk = docs.slice(i, i + chunkSize);
+
+      for (const doc of chunk) {
+        batch.update(doc.ref, {
+          isActive: shouldActivateServices,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+    }
+
+    functions.logger.info(
+      `Master Switch propagated for negocio ${businessId}: ${afterStatus}`
+    );
+  });

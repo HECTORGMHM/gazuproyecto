@@ -69,6 +69,7 @@ class _BusinessRegistrationScreenState
   // ---------------------------------------------------------------------------
   final _step1Key = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
+  final _descripcionController = TextEditingController();
   String? _selectedCategory;
 
   // ---------------------------------------------------------------------------
@@ -96,6 +97,7 @@ class _BusinessRegistrationScreenState
   @override
   void dispose() {
     _nombreController.dispose();
+    _descripcionController.dispose();
     super.dispose();
   }
 
@@ -141,11 +143,12 @@ class _BusinessRegistrationScreenState
       // Upload logo if selected.
       _logoUrl = await _uploadLogo(uid);
 
-      final business = GazuBusiness(
-        ownerId: uid,
-        nombre: _nombreController.text.trim(),
-        categoria: _selectedCategory ?? '',
-        ubicacion: _ubicacion,
+        final business = GazuBusiness(
+          ownerId: uid,
+          nombre: _nombreController.text.trim(),
+          descripcion: _descripcionController.text.trim(),
+          categoria: _selectedCategory ?? '',
+          ubicacion: _ubicacion,
         horarios: Map.from(_horarios),
         status: BusinessStatus.pending,
         logoUrl: _logoUrl,
@@ -328,6 +331,23 @@ class _BusinessRegistrationScreenState
                 }
                 if (v.trim().length < 3) {
                   return 'Mínimo 3 caracteres';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              key: const Key('businessDescriptionField'),
+              controller: _descripcionController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: _inputDecoration(
+                label: 'Descripción del negocio',
+                icon: Icons.description_outlined,
+              ),
+              validator: (v) {
+                if (v != null && v.trim().length > 280) {
+                  return 'Máximo 280 caracteres';
                 }
                 return null;
               },

@@ -150,17 +150,40 @@ class FirestoreService {
   Future<void> updateBusiness(
     String id, {
     String? nombre,
+    String? descripcion,
     String? categoria,
     String? logoUrl,
     Map<String, Map<String, String>>? horarios,
+    BusinessStatus? status,
+    String? masterSwitchReason,
   }) async {
     final updates = <String, dynamic>{
       'updatedAt': FieldValue.serverTimestamp(),
       if (nombre != null) 'nombre': nombre,
+      if (descripcion != null) 'descripcion': descripcion,
       if (categoria != null) 'categoria': categoria,
       if (logoUrl != null) 'logoUrl': logoUrl,
       if (horarios != null)
         'horarios': horarios.map((day, times) => MapEntry(day, times)),
+      if (status != null) 'status': status.value,
+      if (masterSwitchReason != null) 'masterSwitchReason': masterSwitchReason,
+    };
+    await _negociosRef.doc(id).update(updates);
+  }
+
+  /// Updates the Master Switch status for a business.
+  Future<void> setBusinessMasterSwitch(
+    String id, {
+    required bool enabled,
+    String? reason,
+  }) async {
+    final updates = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+      'status': enabled ? BusinessStatus.active.value : BusinessStatus.inactive.value,
+      if (!enabled && reason != null && reason.trim().isNotEmpty)
+        'masterSwitchReason': reason.trim()
+      else
+        'masterSwitchReason': FieldValue.delete(),
     };
     await _negociosRef.doc(id).update(updates);
   }
@@ -205,6 +228,12 @@ class FirestoreService {
     return _serviciosRef(businessId).snapshots().map(
           (snap) => snap.docs.map(GazuService.fromFirestore).toList(),
         );
+  }
+
+  /// Gets all services of [businessId] once.
+  Future<List<GazuService>> getServices(String businessId) async {
+    final snap = await _serviciosRef(businessId).get();
+    return snap.docs.map(GazuService.fromFirestore).toList();
   }
 
   /// Updates editable fields for an existing service.

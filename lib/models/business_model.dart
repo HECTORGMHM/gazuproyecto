@@ -46,6 +46,7 @@ class GazuBusiness {
   final String? id;
   final String ownerId;
   final String nombre;
+  final String descripcion;
   final String categoria;
   final GeoPoint? ubicacion;
 
@@ -53,6 +54,7 @@ class GazuBusiness {
   final Map<String, Map<String, String>> horarios;
 
   final BusinessStatus status;
+  final String? masterSwitchReason;
   final String? logoUrl;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -61,10 +63,12 @@ class GazuBusiness {
     this.id,
     required this.ownerId,
     required this.nombre,
+    this.descripcion = '',
     required this.categoria,
     this.ubicacion,
     this.horarios = const {},
     this.status = BusinessStatus.pending,
+    this.masterSwitchReason,
     this.logoUrl,
     required this.createdAt,
     this.updatedAt,
@@ -75,10 +79,12 @@ class GazuBusiness {
     return {
       'ownerId': ownerId,
       'nombre': nombre,
+      'descripcion': descripcion,
       'categoria': categoria,
       if (ubicacion != null) 'ubicacion': ubicacion,
       'horarios': horarios.map((day, times) => MapEntry(day, times)),
       'status': status.value,
+      if (masterSwitchReason != null) 'masterSwitchReason': masterSwitchReason,
       if (logoUrl != null) 'logoUrl': logoUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt':
@@ -102,10 +108,12 @@ class GazuBusiness {
       id: doc.id,
       ownerId: data['ownerId'] as String? ?? '',
       nombre: data['nombre'] as String? ?? '',
+      descripcion: data['descripcion'] as String? ?? '',
       categoria: data['categoria'] as String? ?? '',
       ubicacion: data['ubicacion'] as GeoPoint?,
       horarios: horarios,
       status: BusinessStatusX.fromString(data['status'] as String?),
+      masterSwitchReason: data['masterSwitchReason'] as String?,
       logoUrl: data['logoUrl'] as String?,
       createdAt:
           (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -115,10 +123,12 @@ class GazuBusiness {
 
   GazuBusiness copyWith({
     String? nombre,
+    String? descripcion,
     String? categoria,
     GeoPoint? ubicacion,
     Map<String, Map<String, String>>? horarios,
     BusinessStatus? status,
+    String? masterSwitchReason,
     String? logoUrl,
     DateTime? updatedAt,
   }) {
@@ -126,10 +136,12 @@ class GazuBusiness {
       id: id,
       ownerId: ownerId,
       nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
       categoria: categoria ?? this.categoria,
       ubicacion: ubicacion ?? this.ubicacion,
       horarios: horarios ?? this.horarios,
       status: status ?? this.status,
+      masterSwitchReason: masterSwitchReason ?? this.masterSwitchReason,
       logoUrl: logoUrl ?? this.logoUrl,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
