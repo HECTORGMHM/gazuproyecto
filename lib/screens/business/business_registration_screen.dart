@@ -143,12 +143,12 @@ class _BusinessRegistrationScreenState
       // Upload logo if selected.
       _logoUrl = await _uploadLogo(uid);
 
-        final business = GazuBusiness(
-          ownerId: uid,
-          nombre: _nombreController.text.trim(),
-          descripcion: _descripcionController.text.trim(),
-          categoria: _selectedCategory ?? '',
-          ubicacion: _ubicacion,
+      final business = GazuBusiness(
+        ownerId: uid,
+        nombre: _nombreController.text.trim(),
+        descripcion: _descripcionController.text.trim(),
+        categoria: _selectedCategory ?? '',
+        ubicacion: _ubicacion,
         horarios: Map.from(_horarios),
         status: BusinessStatus.pending,
         logoUrl: _logoUrl,
