@@ -9,6 +9,9 @@ import '../../utils/constants.dart';
 import 'business_registration_screen.dart';
 import 'service_registration_screen.dart';
 
+const double _statusChipBackgroundOpacity = 0.16;
+const double _statusChipBorderOpacity = 0.39;
+
 /// Dashboard for business owners to manage business details and services.
 class BusinessDashboardScreen extends StatelessWidget {
   const BusinessDashboardScreen({super.key});
@@ -175,8 +178,11 @@ class _BusinessCardState extends State<_BusinessCard> {
               ),
               trailing: Chip(
                 label: Text(statusLabel, style: const TextStyle(fontSize: 11)),
-                backgroundColor: statusColor.withOpacity(0.16),
-                side: BorderSide(color: statusColor.withOpacity(0.39)),
+                backgroundColor:
+                    statusColor.withOpacity(_statusChipBackgroundOpacity),
+                side: BorderSide(
+                  color: statusColor.withOpacity(_statusChipBorderOpacity),
+                ),
                 labelStyle: TextStyle(color: statusColor),
                 padding: EdgeInsets.zero,
               ),
