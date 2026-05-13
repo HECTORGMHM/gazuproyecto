@@ -346,8 +346,9 @@ class _BusinessRegistrationScreenState
                 icon: Icons.description_outlined,
               ),
               validator: (v) {
-                if (v != null && v.trim().length > 280) {
-                  return 'Máximo 280 caracteres (actualmente: ${v.trim().length})';
+                final trimmed = v?.trim() ?? '';
+                if (trimmed.length > 280) {
+                  return 'Máximo 280 caracteres (actualmente: ${trimmed.length})';
                 }
                 return null;
               },

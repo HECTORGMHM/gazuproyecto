@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // TODO(#2): Expand model once Épica: Gestión de negocios is fully implemented.
+const Object _keepMasterSwitchReason = Object();
 
 /// Status values for a [GazuBusiness] document.
 enum BusinessStatus {
@@ -128,7 +129,7 @@ class GazuBusiness {
     GeoPoint? ubicacion,
     Map<String, Map<String, String>>? horarios,
     BusinessStatus? status,
-    String? masterSwitchReason,
+    Object? masterSwitchReason = _keepMasterSwitchReason,
     String? logoUrl,
     DateTime? updatedAt,
   }) {
@@ -141,7 +142,9 @@ class GazuBusiness {
       ubicacion: ubicacion ?? this.ubicacion,
       horarios: horarios ?? this.horarios,
       status: status ?? this.status,
-      masterSwitchReason: masterSwitchReason ?? this.masterSwitchReason,
+      masterSwitchReason: masterSwitchReason == _keepMasterSwitchReason
+          ? this.masterSwitchReason
+          : masterSwitchReason as String?,
       logoUrl: logoUrl ?? this.logoUrl,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
