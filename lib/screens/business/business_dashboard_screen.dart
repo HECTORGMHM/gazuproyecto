@@ -9,8 +9,8 @@ import '../../utils/constants.dart';
 import 'business_registration_screen.dart';
 import 'service_registration_screen.dart';
 
-const double _statusChipBackgroundOpacityValue = 0.16;
-const double _statusChipBorderOpacityValue = 0.39;
+const double _statusChipBackgroundOpacity = 0.16;
+const double _statusChipBorderOpacity = 0.39;
 
 /// Dashboard for business owners to manage business details and services.
 class BusinessDashboardScreen extends StatelessWidget {
@@ -46,7 +46,17 @@ class BusinessDashboardScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final businesses = snapshot.data ?? [];
+          final businesses = (snapshot.data ?? []).toList()
+            ..sort((a, b) {
+              final statusOrderA = _businessStatusOrder(a.status);
+              final statusOrderB = _businessStatusOrder(b.status);
+              if (statusOrderA != statusOrderB) {
+                return statusOrderA.compareTo(statusOrderB);
+              }
+              final aDate = a.updatedAt ?? a.createdAt;
+              final bDate = b.updatedAt ?? b.createdAt;
+              return bDate.compareTo(aDate);
+            });
 
           if (businesses.isEmpty) {
             return _EmptyDashboard(
@@ -66,6 +76,14 @@ class BusinessDashboardScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+int _businessStatusOrder(BusinessStatus status) {
+  return switch (status) {
+    BusinessStatus.active => 0,
+    BusinessStatus.pending => 1,
+    BusinessStatus.inactive => 2,
+  };
 }
 
 class _EmptyDashboard extends StatelessWidget {
@@ -179,9 +197,9 @@ class _BusinessCardState extends State<_BusinessCard> {
               trailing: Chip(
                 label: Text(statusLabel, style: const TextStyle(fontSize: 11)),
                 backgroundColor:
-                    statusColor.withOpacity(_statusChipBackgroundOpacityValue),
+                    statusColor.withOpacity(_statusChipBackgroundOpacity),
                 side: BorderSide(
-                  color: statusColor.withOpacity(_statusChipBorderOpacityValue),
+                  color: statusColor.withOpacity(_statusChipBorderOpacity),
                 ),
                 labelStyle: TextStyle(color: statusColor),
                 padding: EdgeInsets.zero,

@@ -307,7 +307,8 @@ class _AppDrawer extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.design_services_outlined),
               title: const Text('Configurar negocio y servicios'),
-              subtitle: const Text('Registro completo para publicar y reservar'),
+              subtitle:
+                  const Text('Flujo guiado profesional para publicar y reservar'),
               onTap: () => _handleBusinessSetupFlow(context),
             ),
             const Divider(),
@@ -360,9 +361,11 @@ class _AppDrawer extends StatelessWidget {
     final shouldRelogin = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cuenta business requerida'),
+        title: const Text('Se requiere cuenta de negocio'),
         content: const Text(
-          'Para agregar un servicio-negocio debes volver a iniciar sesión con tu cuenta business.',
+          'Para continuar con el alta profesional de negocio y servicios, '
+          'debes iniciar sesión con una cuenta business. '
+          'Se cerrará tu sesión actual para cambiar de cuenta.',
         ),
         actions: [
           TextButton(
@@ -371,7 +374,7 @@ class _AppDrawer extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cerrar sesión'),
+            child: const Text('Cambiar cuenta'),
           ),
         ],
       ),
