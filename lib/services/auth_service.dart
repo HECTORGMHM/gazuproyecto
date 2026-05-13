@@ -429,7 +429,8 @@ String authResultMessage(AuthResult result) {
       return 'Error de red. Verifica tu conexión a internet.';
     case AuthResult.googleSignInFailed:
       return 'No se pudo iniciar sesión con Google. '
-          'Verifica tu conexión o intenta de nuevo.';
+          'Revisa la configuración de Google Sign-In (SHA-1/Client ID) '
+          'o intenta de nuevo.';
     case AuthResult.unknown:
       return 'Ocurrió un error inesperado. Inténtalo de nuevo.';
   }
