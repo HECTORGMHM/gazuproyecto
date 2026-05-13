@@ -97,6 +97,7 @@ class AuthService {
   Future<AuthResult> signInWithEmail({
     required String email,
     required String password,
+    UserRole role = UserRole.user,
   }) async {
     try {
       final locked = await _firestoreService.isLockedOut(email);
@@ -112,6 +113,13 @@ class AuthService {
       if (user != null && !user.emailVerified) {
         await _auth.signOut();
         return AuthResult.emailNotVerified;
+      }
+
+      if (user != null) {
+        await _ensureFirestoreUser(
+          user,
+          desiredRole: role,
+        );
       }
 
       await _firestoreService.resetLoginAttempts(email);
@@ -137,12 +145,17 @@ class AuthService {
   /// package flow is used instead.
   ///
   /// Returns [AuthResult.canceled] when the user dismisses the picker.
-  Future<AuthResult> signInWithGoogle() async {
+  Future<AuthResult> signInWithGoogle({
+    UserRole role = UserRole.user,
+  }) async {
     try {
       if (kIsWeb) {
         final googleProvider = GoogleAuthProvider();
         final userCredential = await _auth.signInWithPopup(googleProvider);
-        await _ensureFirestoreUser(userCredential.user!);
+        await _ensureFirestoreUser(
+          userCredential.user!,
+          desiredRole: role,
+        );
         return AuthResult.success;
       }
 
@@ -157,7 +170,10 @@ class AuthService {
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
-      await _ensureFirestoreUser(userCredential.user!);
+      await _ensureFirestoreUser(
+        userCredential.user!,
+        desiredRole: role,
+      );
       return AuthResult.success;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'popup-closed-by-user' ||
@@ -187,14 +203,19 @@ class AuthService {
   /// `sign_in_with_apple` native package is not supported on web.
   ///
   /// Returns [AuthResult.canceled] when the user dismisses the picker.
-  Future<AuthResult> signInWithApple() async {
+  Future<AuthResult> signInWithApple({
+    UserRole role = UserRole.user,
+  }) async {
     try {
       if (kIsWeb) {
         final appleProvider = OAuthProvider('apple.com')
           ..addScope('email')
           ..addScope('name');
         final userCredential = await _auth.signInWithPopup(appleProvider);
-        await _ensureFirestoreUser(userCredential.user!);
+        await _ensureFirestoreUser(
+          userCredential.user!,
+          desiredRole: role,
+        );
         return AuthResult.success;
       }
 
@@ -214,6 +235,7 @@ class AuthService {
       final userCredential = await _auth.signInWithCredential(oauthCredential);
       await _ensureFirestoreUser(
         userCredential.user!,
+        desiredRole: role,
         displayNameOverride:
             [appleCredential.givenName, appleCredential.familyName]
                 .where((s) => s != null && s.isNotEmpty)
@@ -330,6 +352,7 @@ class AuthService {
   Future<void> _ensureFirestoreUser(
     User firebaseUser, {
     String? displayNameOverride,
+    UserRole desiredRole = UserRole.user,
   }) async {
     final existing = await _firestoreService.getUser(firebaseUser.uid);
     if (existing == null) {
@@ -340,9 +363,20 @@ class AuthService {
             ? displayNameOverride!
             : (firebaseUser.displayName ?? 'Usuario'),
         photoUrl: firebaseUser.photoURL,
+        role: desiredRole,
+        verificationStatus: BusinessVerificationStatus.none,
         createdAt: DateTime.now(),
       );
       await _firestoreService.createUser(gazuUser);
+      return;
+    }
+
+    if (desiredRole == UserRole.business && existing.role != UserRole.business) {
+      await _firestoreService.setUserRole(
+        firebaseUser.uid,
+        role: UserRole.business,
+        verificationStatus: BusinessVerificationStatus.none,
+      );
     }
   }
 

@@ -365,7 +365,9 @@ class _AppDrawer extends StatelessWidget {
         content: const Text(
           'Para continuar con el alta profesional de negocio y servicios, '
           'debes iniciar sesión con una cuenta business. '
-          'Se cerrará tu sesión actual para cambiar de cuenta.',
+          'Se cerrará tu sesión actual para cambiar de cuenta.\n\n'
+          'En la pantalla de inicio de sesión activa la opción '
+          '"Entrar como cuenta business".',
         ),
         actions: [
           TextButton(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../utils/validators.dart';
 import 'register_screen.dart';
@@ -21,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _loading = false;
   bool _obscurePassword = true;
+  bool _loginAsBusiness = false;
 
   @override
   void dispose() {
@@ -36,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final result = await context.read<AuthService>().signInWithEmail(
           email: _emailController.text,
           password: _passwordController.text,
+          role: _loginAsBusiness ? UserRole.business : UserRole.user,
         );
 
     if (!mounted) return;
@@ -61,7 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
-    final result = await context.read<AuthService>().signInWithGoogle();
+    final result = await context.read<AuthService>().signInWithGoogle(
+          role: _loginAsBusiness ? UserRole.business : UserRole.user,
+        );
     if (!mounted) return;
     setState(() => _loading = false);
     // Silently ignore user-initiated cancellations.
@@ -73,7 +78,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signInWithApple() async {
     setState(() => _loading = true);
-    final result = await context.read<AuthService>().signInWithApple();
+    final result = await context.read<AuthService>().signInWithApple(
+          role: _loginAsBusiness ? UserRole.business : UserRole.user,
+        );
     if (!mounted) return;
     setState(() => _loading = false);
     // Silently ignore user-initiated cancellations.
@@ -190,6 +197,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Iniciar sesión'),
+                ),
+                const SizedBox(height: 24),
+
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _loginAsBusiness
+                          ? theme.colorScheme.primary
+                          : Colors.grey.withAlpha(90),
+                    ),
+                  ),
+                  child: SwitchListTile.adaptive(
+                    value: _loginAsBusiness,
+                    onChanged: _loading
+                        ? null
+                        : (v) => setState(() => _loginAsBusiness = v),
+                    secondary: const Icon(Icons.storefront_outlined),
+                    title: const Text('Entrar como cuenta business'),
+                    subtitle: const Text(
+                      'Te llevará al formulario de verificación profesional.',
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
 

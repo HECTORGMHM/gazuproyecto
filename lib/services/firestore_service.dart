@@ -51,6 +51,23 @@ class FirestoreService {
     await _usersRef.doc(uid).update(updates);
   }
 
+  /// Updates the user role and optionally resets the verification status.
+  ///
+  /// Used when a user chooses to continue as a business account at login.
+  Future<void> setUserRole(
+    String uid, {
+    required UserRole role,
+    BusinessVerificationStatus? verificationStatus,
+  }) async {
+    final updates = <String, dynamic>{
+      'role': role.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (verificationStatus != null)
+        'verificationStatus': verificationStatus.value,
+    };
+    await _usersRef.doc(uid).update(updates);
+  }
+
   /// Streams real-time updates for the user with [uid].
   Stream<GazuUser?> userStream(String uid) {
     return _usersRef.doc(uid).snapshots().map((snap) {
