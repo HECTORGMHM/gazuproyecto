@@ -157,7 +157,7 @@ class _BusinessRegistrationScreenState
         categoria: _selectedCategory ?? '',
         ubicacion: _ubicacion,
         horarios: Map.from(_horarios),
-        status: BusinessStatus.active,
+        status: BusinessStatus.pending,
         logoUrl: _logoUrl,
         createdAt: DateTime.now(),
       );

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
@@ -18,6 +19,7 @@ enum AuthResult {
   tooManyRequests,
   lockedOut,
   networkError,
+  googleSignInFailed,
   unknown,
 }
 
@@ -163,8 +165,15 @@ class AuthService {
         return AuthResult.canceled;
       }
       return _mapFirebaseAuthException(e);
+    } on PlatformException catch (e) {
+      // google_sign_in throws PlatformException when SHA-1 / client ID is
+      // not configured for the current platform build.
+      if (e.code == 'sign_in_canceled' || e.code == 'canceled') {
+        return AuthResult.canceled;
+      }
+      return AuthResult.googleSignInFailed;
     } catch (_) {
-      return AuthResult.unknown;
+      return AuthResult.googleSignInFailed;
     }
   }
 
@@ -384,6 +393,9 @@ String authResultMessage(AuthResult result) {
           'Inténtalo en $kLockoutDurationMinutes minutos.';
     case AuthResult.networkError:
       return 'Error de red. Verifica tu conexión a internet.';
+    case AuthResult.googleSignInFailed:
+      return 'No se pudo iniciar sesión con Google. '
+          'Verifica tu conexión o intenta de nuevo.';
     case AuthResult.unknown:
       return 'Ocurrió un error inesperado. Inténtalo de nuevo.';
   }

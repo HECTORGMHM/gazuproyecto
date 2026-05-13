@@ -9,6 +9,8 @@ class AppCollections {
   static const String staff = 'staff';
   /// Subcollection under each negocio document for its offered services.
   static const String servicios = 'servicios';
+  /// KYC verification documents submitted by business owners.
+  static const String verificaciones = 'verificaciones_negocio';
 }
 
 /// Brand colours shared across the Alta de Negocio flow.

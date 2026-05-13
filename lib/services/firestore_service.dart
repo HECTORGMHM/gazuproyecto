@@ -216,6 +216,69 @@ class FirestoreService {
       _markUserHasBusiness(uid, value: value);
 
   // ---------------------------------------------------------------------------
+  // Business owner KYC verification (anti-fraud)
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> get _verificacionesRef =>
+      _firestore.collection(AppCollections.verificaciones);
+
+  /// Submits the KYC verification data for [uid].
+  ///
+  /// Stores the verification document in `/verificaciones_negocio/{uid}` and
+  /// updates the user's `verificationStatus` field to `'pending'`.
+  Future<void> submitOwnerVerification({
+    required String uid,
+    required String fullLegalName,
+    required String rfc,
+    String? curp,
+    required String phone,
+    required String businessEmail,
+    required String idType,
+    required String idFrontUrl,
+    String? idBackUrl,
+  }) async {
+    final batch = _firestore.batch();
+
+    final verDoc = _verificacionesRef.doc(uid);
+    batch.set(verDoc, {
+      'uid': uid,
+      'fullLegalName': fullLegalName.trim(),
+      'rfc': rfc.trim().toUpperCase(),
+      if (curp != null && curp.trim().isNotEmpty) 'curp': curp.trim().toUpperCase(),
+      'phone': phone.trim(),
+      'businessEmail': businessEmail.trim().toLowerCase(),
+      'idType': idType,
+      'idFrontUrl': idFrontUrl,
+      if (idBackUrl != null && idBackUrl.isNotEmpty) 'idBackUrl': idBackUrl,
+      'status': 'pending',
+      'submittedAt': FieldValue.serverTimestamp(),
+    });
+
+    final userDoc = _usersRef.doc(uid);
+    batch.update(userDoc, {
+      'verificationStatus': 'pending',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  /// Streams real-time updates for the KYC verification document of [uid].
+  Stream<Map<String, dynamic>?> verificationStream(String uid) {
+    return _verificacionesRef.doc(uid).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return snap.data();
+    });
+  }
+
+  /// Retrieves the KYC verification document for [uid] once.
+  Future<Map<String, dynamic>?> getVerification(String uid) async {
+    final snap = await _verificacionesRef.doc(uid).get();
+    if (!snap.exists) return null;
+    return snap.data();
+  }
+
+  // ---------------------------------------------------------------------------
   // Service CRUD (subcollection /negocios/{businessId}/servicios)
   // ---------------------------------------------------------------------------
 
