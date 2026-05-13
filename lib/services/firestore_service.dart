@@ -197,6 +197,12 @@ class FirestoreService {
             snap.docs.map(GazuBusiness.fromFirestore).toList());
   }
 
+  /// Gets all businesses owned by [ownerId] once.
+  Future<List<GazuBusiness>> getBusinessesByOwner(String ownerId) async {
+    final snap = await _negociosRef.where('ownerId', isEqualTo: ownerId).get();
+    return snap.docs.map(GazuBusiness.fromFirestore).toList();
+  }
+
   /// Sets `hasBusiness` flag on the user document.
   Future<void> _markUserHasBusiness(String uid, {required bool value}) async {
     await _usersRef.doc(uid).update({

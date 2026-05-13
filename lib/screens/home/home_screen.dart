@@ -295,7 +295,7 @@ class _AppDrawer extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.storefront_outlined),
-              title: const Text('Panel de negocio'),
+              title: const Text('Mi negocio'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
@@ -306,20 +306,9 @@ class _AppDrawer extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.design_services_outlined),
-              title: const Text('Agregar servicio-negocio'),
-              subtitle: const Text('Requiere cuenta business'),
-              onTap: () => _handleBusinessServiceAccess(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_business_outlined),
-              title: const Text('Registrar negocio'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const BusinessRegistrationScreen()),
-                );
-              },
+              title: const Text('Configurar negocio y servicios'),
+              subtitle: const Text('Registro completo para publicar y reservar'),
+              onTap: () => _handleBusinessSetupFlow(context),
             ),
             const Divider(),
             ListTile(
@@ -336,13 +325,35 @@ class _AppDrawer extends StatelessWidget {
     );
   }
 
-  Future<void> _handleBusinessServiceAccess(BuildContext context) async {
+  Future<void> _handleBusinessSetupFlow(BuildContext context) async {
     Navigator.pop(context);
 
     if (role == UserRole.business) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ServiceRegistrationScreen()),
-      );
+      final firestoreService = context.read<FirestoreService>();
+      final uid = authService.currentUser?.uid;
+      if (uid == null) return;
+
+      final businesses = await firestoreService.getBusinessesByOwner(uid);
+
+      if (!context.mounted) return;
+      if (businesses.isEmpty) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const BusinessRegistrationScreen(
+              continueToServiceRegistration: true,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ServiceRegistrationScreen(
+              initialBusinessId: businesses.first.id,
+              startAtServiceInfoStep: true,
+            ),
+          ),
+        );
+      }
       return;
     }
 

@@ -11,6 +11,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/constants.dart';
 import 'business_dashboard_screen.dart';
+import 'service_registration_screen.dart';
 
 // TODO(#2): Wire Google Maps picker in Step 2 once issue #10
 // (Épica: Geolocalización y mapa) is implemented.
@@ -46,11 +47,17 @@ const List<String> kWeekdays = [
 /// - Step 3: Weekly schedule configuration.
 ///
 /// On completion it writes the business document to `/negocios/` via
-/// [FirestoreService.createBusiness] and navigates to [BusinessDashboardScreen].
+/// [FirestoreService.createBusiness] and navigates to [BusinessDashboardScreen]
+/// (or to [ServiceRegistrationScreen] when the onboarding flow is enabled).
 ///
 /// Related issues: #2 (Gestión de negocios), #10 (Geolocalización).
 class BusinessRegistrationScreen extends StatefulWidget {
-  const BusinessRegistrationScreen({super.key});
+  const BusinessRegistrationScreen({
+    super.key,
+    this.continueToServiceRegistration = false,
+  });
+
+  final bool continueToServiceRegistration;
 
   @override
   State<BusinessRegistrationScreen> createState() =>
@@ -150,17 +157,28 @@ class _BusinessRegistrationScreenState
         categoria: _selectedCategory ?? '',
         ubicacion: _ubicacion,
         horarios: Map.from(_horarios),
-        status: BusinessStatus.pending,
+        status: BusinessStatus.active,
         logoUrl: _logoUrl,
         createdAt: DateTime.now(),
       );
 
-      await firestoreService.createBusiness(business);
+      final businessId = await firestoreService.createBusiness(business);
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
-      );
+      if (widget.continueToServiceRegistration) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ServiceRegistrationScreen(
+              initialBusinessId: businessId,
+              startAtServiceInfoStep: true,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+        );
+      }
     } catch (e) {
       _showError('Error al registrar el negocio: $e');
     } finally {
