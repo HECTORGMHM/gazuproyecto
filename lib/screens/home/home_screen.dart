@@ -383,6 +383,7 @@ class _AppDrawer extends StatelessWidget {
     );
 
     if (shouldRelogin == true) {
+      authService.setPendingLoginRole(UserRole.business);
       await authService.signOut();
     }
   }

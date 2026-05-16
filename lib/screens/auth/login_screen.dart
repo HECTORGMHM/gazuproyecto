@@ -25,6 +25,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loginAsBusiness = false;
 
   @override
+  void initState() {
+    super.initState();
+    final pendingRole = context.read<AuthService>().consumePendingLoginRole();
+    if (pendingRole == UserRole.business) {
+      _loginAsBusiness = true;
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();

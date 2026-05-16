@@ -40,6 +40,7 @@ class AuthService {
   final FirebaseAuth? _injectedAuth;
   final GoogleSignIn _googleSignIn;
   final FirestoreService _firestoreService;
+  UserRole? _pendingLoginRole;
 
   /// Returns the injected FirebaseAuth or the default singleton.
   FirebaseAuth get _auth => _injectedAuth ?? FirebaseAuth.instance;
@@ -49,6 +50,18 @@ class AuthService {
 
   /// Stream of auth-state changes.
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  /// Stores an intended role for the next login attempt.
+  void setPendingLoginRole(UserRole role) {
+    _pendingLoginRole = role;
+  }
+
+  /// Returns and clears the intended role for the next login attempt.
+  UserRole? consumePendingLoginRole() {
+    final role = _pendingLoginRole;
+    _pendingLoginRole = null;
+    return role;
+  }
 
   // ---------------------------------------------------------------------------
   // Email / Password
