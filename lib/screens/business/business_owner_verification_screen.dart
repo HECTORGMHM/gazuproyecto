@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -54,6 +56,8 @@ class _BusinessOwnerVerificationScreenState
   String? _selectedIdType;
   File? _idFrontFile;
   File? _idBackFile;
+  Uint8List? _idFrontBytes;
+  Uint8List? _idBackBytes;
   String? _idFrontUrl;
   String? _idBackUrl;
 
@@ -83,21 +87,35 @@ class _BusinessOwnerVerificationScreenState
       imageQuality: 88,
     );
     if (picked == null) return;
+    final bytes = kIsWeb ? await picked.readAsBytes() : null;
     setState(() {
       if (isFront) {
-        _idFrontFile = File(picked.path);
+        _idFrontFile = kIsWeb ? null : File(picked.path);
+        _idFrontBytes = bytes;
       } else {
-        _idBackFile = File(picked.path);
+        _idBackFile = kIsWeb ? null : File(picked.path);
+        _idBackBytes = bytes;
       }
     });
   }
 
-  Future<String> _uploadIdImage(File file, String uid, String side) async {
-    final ext = file.path.split('.').last.toLowerCase();
+  Future<String> _uploadIdImage({
+    required File? file,
+    required Uint8List? bytes,
+    required String uid,
+    required String side,
+  }) async {
+    final ext = file?.path.split('.').last.toLowerCase() ?? 'jpg';
     final ref = FirebaseStorage.instance.ref(
       'verificaciones/$uid/id_${side}_${DateTime.now().millisecondsSinceEpoch}.$ext',
     );
-    await ref.putFile(file);
+    if (bytes != null) {
+      await ref.putData(bytes);
+    } else if (file != null) {
+      await ref.putFile(file);
+    } else {
+      throw Exception('No se encontró imagen para subir.');
+    }
     return ref.getDownloadURL();
   }
 
@@ -109,7 +127,7 @@ class _BusinessOwnerVerificationScreenState
       _showError('Debes aceptar todos los puntos para continuar.');
       return;
     }
-    if (_idFrontFile == null) {
+    if (_idFrontFile == null && _idFrontBytes == null) {
       _showError('Debes subir la fotografía frontal de tu identificación.');
       return;
     }
@@ -121,9 +139,19 @@ class _BusinessOwnerVerificationScreenState
       final uid = authService.currentUser?.uid;
       if (uid == null) throw Exception('No hay sesión activa.');
 
-      _idFrontUrl = await _uploadIdImage(_idFrontFile!, uid, 'front');
-      if (_idBackFile != null) {
-        _idBackUrl = await _uploadIdImage(_idBackFile!, uid, 'back');
+      _idFrontUrl = await _uploadIdImage(
+        file: _idFrontFile,
+        bytes: _idFrontBytes,
+        uid: uid,
+        side: 'front',
+      );
+      if (_idBackFile != null || _idBackBytes != null) {
+        _idBackUrl = await _uploadIdImage(
+          file: _idBackFile,
+          bytes: _idBackBytes,
+          uid: uid,
+          side: 'back',
+        );
       }
 
       await firestoreService.submitOwnerVerification(
@@ -165,7 +193,7 @@ class _BusinessOwnerVerificationScreenState
     }
     if (_step == 1) {
       if (!(_step2Key.currentState?.validate() ?? false)) return;
-      if (_idFrontFile == null) {
+      if (_idFrontFile == null && _idFrontBytes == null) {
         _showError('Debes subir la fotografía frontal de tu identificación.');
         return;
       }
@@ -447,12 +475,14 @@ class _BusinessOwnerVerificationScreenState
             _idUploadTile(
               label: 'Foto frontal de la identificación *',
               file: _idFrontFile,
+              bytes: _idFrontBytes,
               onTap: () => _pickImage(isFront: true),
             ),
             const SizedBox(height: 12),
             _idUploadTile(
               label: 'Foto reverso (opcional)',
               file: _idBackFile,
+              bytes: _idBackBytes,
               onTap: () => _pickImage(isFront: false),
             ),
             const SizedBox(height: 8),
@@ -471,8 +501,10 @@ class _BusinessOwnerVerificationScreenState
   Widget _idUploadTile({
     required String label,
     required File? file,
+    required Uint8List? bytes,
     required VoidCallback onTap,
   }) {
+    final hasImage = file != null || bytes != null;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -481,18 +513,24 @@ class _BusinessOwnerVerificationScreenState
           color: const Color(0xFF2C2C2C),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: file != null
+            color: hasImage
                 ? const Color(AppColors.primaryOrange)
                 : Colors.white24,
           ),
         ),
-        child: file != null
+        child: hasImage
             ? Stack(
                 fit: StackFit.expand,
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(9),
-                    child: Image.file(file, fit: BoxFit.cover),
+                    child: bytes != null
+                        ? Image.memory(
+                            bytes,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                          )
+                        : Image.file(file!, fit: BoxFit.cover),
                   ),
                   Positioned(
                     bottom: 6,
