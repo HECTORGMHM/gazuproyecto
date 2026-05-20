@@ -5,6 +5,13 @@ import '../models/service_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
 
+const Set<String> _completedAppointmentStatuses = {
+  'completed',
+  'completada',
+  'finalized',
+  'finalizada',
+};
+
 /// Service for Firestore user data operations.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
@@ -268,10 +275,7 @@ class FirestoreService {
 
       final appointmentData = appointmentSnap.data()!;
       final status = (appointmentData['status'] as String? ?? '').toLowerCase();
-      final isFinished = status == 'completed' ||
-          status == 'completada' ||
-          status == 'finalized' ||
-          status == 'finalizada';
+      final isFinished = _completedAppointmentStatuses.contains(status);
       if (!isFinished) {
         throw StateError('Solo puedes calificar citas finalizadas.');
       }

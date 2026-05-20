@@ -60,10 +60,11 @@ class ReviewsScreen extends StatelessWidget {
             );
           }
 
-          final avg = reviews
-                  .map((r) => r.rating)
-                  .fold<int>(0, (a, b) => a + b) /
-              reviews.length;
+          final total = reviews.fold<double>(
+            0.0,
+            (sum, review) => sum + review.rating,
+          );
+          final avg = total / reviews.length;
 
           return ListView(
             padding: const EdgeInsets.all(16),

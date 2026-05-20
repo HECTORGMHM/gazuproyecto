@@ -28,6 +28,10 @@ const OFFENSIVE_WORDS = [
   "pendejo",
   "mierda",
 ];
+const COLLECTION_REVIEWS = "reviews";
+const COLLECTION_NEGOCIOS = "negocios";
+const COLLECTION_STAFF = "staff";
+const COLLECTION_REPUTATION_STATS = "reputationStats";
 
 type ReviewData = {
   targetType?: string;
@@ -167,7 +171,7 @@ async function getRecentLowRatingsCount(
 ): Promise<number> {
   const thresholdDate = new Date(Date.now() - ATTACK_WINDOW_MS);
   const recentSnap = await db
-    .collection("reviews")
+    .collection(COLLECTION_REVIEWS)
     .where("targetType", "==", targetType)
     .where("targetId", "==", targetId)
     .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(thresholdDate))
@@ -180,7 +184,7 @@ async function getRecentLowRatingsCount(
 }
 
 export const moderateReviewOnCreate = functions.firestore
-  .document("reviews/{reviewId}")
+  .document(`${COLLECTION_REVIEWS}/{reviewId}`)
   .onCreate(async (snapshot) => {
     const data = (snapshot.data() ?? {}) as ReviewData;
     const targetType = data.targetType ?? "";
@@ -203,7 +207,7 @@ export const moderateReviewOnCreate = functions.firestore
   });
 
 export const updateReputationStats = functions.firestore
-  .document("reviews/{reviewId}")
+  .document(`${COLLECTION_REVIEWS}/{reviewId}`)
   .onWrite(async (change) => {
     const after = change.after.exists
       ? (change.after.data() as ReviewData)
@@ -219,7 +223,7 @@ export const updateReputationStats = functions.firestore
     }
 
     const reviewsSnap = await db
-      .collection("reviews")
+      .collection(COLLECTION_REVIEWS)
       .where("targetType", "==", targetType)
       .where("targetId", "==", targetId)
       .get();
@@ -245,7 +249,8 @@ export const updateReputationStats = functions.firestore
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    const targetCollection = targetType === "staff" ? "staff" : "negocios";
+    const targetCollection =
+      targetType === "staff" ? COLLECTION_STAFF : COLLECTION_NEGOCIOS;
     await Promise.all([
       db.collection(targetCollection).doc(targetId).set(
         {
@@ -259,7 +264,7 @@ export const updateReputationStats = functions.firestore
         },
         { merge: true }
       ),
-      db.collection("reputationStats")
+      db.collection(COLLECTION_REPUTATION_STATS)
         .doc(`${targetType}_${targetId}`)
         .set(stats, { merge: true }),
     ]);
