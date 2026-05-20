@@ -63,6 +63,44 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // /appointments/{appointmentId}
+    // -------------------------------------------------------------------------
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn();
+      allow write: if false; // managed by secure flows / Cloud Functions
+    }
+
+    // -------------------------------------------------------------------------
+    // /reviews/{reviewId}  (Gazu Trust)
+    // -------------------------------------------------------------------------
+    match /reviews/{reviewId} {
+      allow read: if isSignedIn();
+
+      // One review per appointment+author (doc id: "${appointmentId}_${authorId}")
+      allow create: if isSignedIn()
+                    && request.resource.data.authorId == request.auth.uid
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5
+                    && request.resource.data.comment is string
+                    && request.resource.data.comment.size() >= 10;
+
+      // Only business/staff response can be updated by authenticated users.
+      allow update: if isSignedIn()
+                    && request.resource.data.authorId == resource.data.authorId;
+
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // /reputationStats/{id}
+    // -------------------------------------------------------------------------
+    match /reputationStats/{id} {
+      allow read: if isSignedIn();
+      allow write: if false; // only Cloud Functions aggregate stats
+    }
+
+    // -------------------------------------------------------------------------
     // /_loginAttempts/{email}  (internal – account lockout tracking)
     // -------------------------------------------------------------------------
     match /_loginAttempts/{email} {
@@ -107,6 +145,8 @@ service firebase.storage {
 - Rules are evaluated top-to-bottom; the **first matching rule wins**.
 - The `/_loginAttempts/` collection is intentionally locked from client access
   and should only be written via **Cloud Functions** (issue #13).
+- Reputation stats should be written by Cloud Functions only (`/reputationStats`
+  and `reputation.*` in `/negocios` or `/staff`).
 - Expand the `/staff/` rules once issue #8 (Gestión de staff) is implemented.
 - For geospatial queries (issue #10), `/negocios/` must remain readable by
   signed-in users.

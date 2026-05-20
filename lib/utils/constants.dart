@@ -7,6 +7,9 @@ class AppCollections {
   /// The product spec names this collection 'negocios'.
   static const String negocios = 'negocios';
   static const String staff = 'staff';
+  static const String appointments = 'appointments';
+  static const String reviews = 'reviews';
+  static const String reputationStats = 'reputationStats';
   /// Subcollection under each negocio document for its offered services.
   static const String servicios = 'servicios';
 }
