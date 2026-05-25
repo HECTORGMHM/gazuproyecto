@@ -5,6 +5,7 @@ import '../../models/business_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/constants.dart';
+import '../catalog/service_catalog_screen.dart';
 import 'business_registration_screen.dart';
 
 // TODO(#2): Implement full business management (services, staff, stats)
@@ -164,6 +165,14 @@ class _BusinessCard extends StatelessWidget {
           side: BorderSide(color: statusColor.withAlpha(100)),
           labelStyle: TextStyle(color: statusColor),
           padding: EdgeInsets.zero,
+        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ServiceCatalogScreen(
+              businessId: business.id ?? '',
+              businessName: business.nombre,
+            ),
+          ),
         ),
       ),
     );

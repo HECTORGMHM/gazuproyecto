@@ -174,6 +174,14 @@ class FirestoreService {
             snap.docs.map(GazuBusiness.fromFirestore).toList());
   }
 
+  /// Streams active businesses for customer browsing.
+  Stream<List<GazuBusiness>> activeBusinessesStream() {
+    return _negociosRef
+        .where('status', isEqualTo: BusinessStatus.active.value)
+        .snapshots()
+        .map((snap) => snap.docs.map(GazuBusiness.fromFirestore).toList());
+  }
+
   /// Sets `hasBusiness` flag on the user document.
   Future<void> _markUserHasBusiness(String uid, {required bool value}) async {
     await _usersRef.doc(uid).update({
@@ -205,6 +213,41 @@ class FirestoreService {
     return _serviciosRef(businessId).snapshots().map(
           (snap) => snap.docs.map(GazuService.fromFirestore).toList(),
         );
+  }
+
+  /// Streams catalog-ready services for customers with optional filtering.
+  Stream<List<GazuService>> catalogServicesStream(
+    String businessId, {
+    String? categoria,
+    double? minPrecio,
+    double? maxPrecio,
+    int? minDuracion,
+    int? maxDuracion,
+  }) {
+    return servicesStream(businessId).map((services) {
+      final filtered = services.where((service) {
+        if (!service.isActive || !service.hasStock) return false;
+
+        if (categoria != null &&
+            categoria.isNotEmpty &&
+            categoria != 'Todas' &&
+            service.categoria != categoria) {
+          return false;
+        }
+
+        final price = service.effectiveBasePrice;
+        if (minPrecio != null && price < minPrecio) return false;
+        if (maxPrecio != null && price > maxPrecio) return false;
+
+        if (minDuracion != null && service.duracion < minDuracion) return false;
+        if (maxDuracion != null && service.duracion > maxDuracion) return false;
+
+        return true;
+      }).toList();
+
+      filtered.sort((a, b) => a.nombre.compareTo(b.nombre));
+      return filtered;
+    });
   }
 
   /// Updates editable fields for an existing service.

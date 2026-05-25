@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:gazu/models/business_model.dart';
+import 'package:gazu/models/service_model.dart';
 import 'package:gazu/models/user_model.dart';
 import 'package:gazu/screens/auth/email_verification_screen.dart';
 import 'package:gazu/screens/auth/login_screen.dart';
@@ -526,6 +527,44 @@ void main() {
 
     test('default status is pending', () {
       expect(base.status, BusinessStatus.pending);
+    });
+
+    // -------------------------------------------------------------------------
+    // GazuService model tests (issue #9 – Catálogo de servicios)
+    // -------------------------------------------------------------------------
+
+    group('GazuService', () {
+      final base = GazuService(
+        businessId: 'biz1',
+        ownerId: 'owner1',
+        nombre: 'Corte clásico',
+        descripcion: 'Servicio base',
+        precio: 250,
+        duracion: 45,
+        categoria: 'Barbería',
+        hasStock: true,
+        imageUrl: 'https://example.com/service.jpg',
+        staffPrices: const {'Ana': 220, 'Luis': 240},
+        createdAt: DateTime(2024),
+      );
+
+      test('toFirestore includes image and stock fields', () {
+        final map = base.toFirestore();
+        expect(map['hasStock'], isTrue);
+        expect(map['imageUrl'], 'https://example.com/service.jpg');
+        expect(map['staffPrices'], isNotNull);
+      });
+
+      test('effectiveBasePrice returns min staff price when variable', () {
+        expect(base.hasVariablePrice, isTrue);
+        expect(base.effectiveBasePrice, 220);
+      });
+
+      test('effectiveBasePrice returns base price without staff variants', () {
+        final noVariants = base.copyWith(staffPrices: const {});
+        expect(noVariants.hasVariablePrice, isFalse);
+        expect(noVariants.effectiveBasePrice, 250);
+      });
     });
 
     test('toFirestore map contains expected keys', () {

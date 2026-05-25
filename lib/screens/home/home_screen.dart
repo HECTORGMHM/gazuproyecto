@@ -8,6 +8,7 @@ import '../../widgets/profile_switcher.dart';
 import '../business/business_dashboard_screen.dart';
 import '../business/business_registration_screen.dart';
 import '../business/service_registration_screen.dart';
+import '../catalog/service_catalog_screen.dart';
 import '../profile/update_profile_screen.dart';
 
 /// Home screen that adapts its content based on the current user's [UserRole].
@@ -173,10 +174,15 @@ class _UserPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        const _HomeCard(
+        _HomeCard(
           icon: Icons.search,
-          title: 'Explorar negocios',
-          subtitle: 'Encuentra servicios cerca de ti',
+          title: 'Catálogo de servicios',
+          subtitle: 'Explora negocios y filtra servicios',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const BusinessCatalogDirectoryScreen(),
+            ),
+          ),
         ),
         const _HomeCard(
           icon: Icons.calendar_today,
