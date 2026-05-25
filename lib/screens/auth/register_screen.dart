@@ -25,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   String _currentPassword = '';
+  bool _registerAsBusiness = false;
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           email: _emailController.text,
           password: _passwordController.text,
           displayName: _nameController.text,
+          role: _registerAsBusiness ? UserRole.business : UserRole.user,
         );
 
     if (!mounted) return;
@@ -171,6 +173,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (v) => Validators.confirmPassword(
                       v, _passwordController.text),
+                ),
+                const SizedBox(height: 32),
+
+                // Business account toggle
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _registerAsBusiness
+                          ? theme.colorScheme.primary
+                          : Colors.grey.withAlpha(80),
+                    ),
+                    color: _registerAsBusiness
+                        ? theme.colorScheme.primaryContainer
+                        : null,
+                  ),
+                  child: SwitchListTile.adaptive(
+                    value: _registerAsBusiness,
+                    onChanged: (v) =>
+                        setState(() => _registerAsBusiness = v),
+                    secondary: Icon(
+                      Icons.storefront_outlined,
+                      color: _registerAsBusiness
+                          ? theme.colorScheme.primary
+                          : Colors.grey,
+                    ),
+                    title: const Text('Quiero registrar un negocio'),
+                    subtitle: const Text(
+                      'Se requerirá verificación de identidad antes\nde publicar tu negocio.',
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
 

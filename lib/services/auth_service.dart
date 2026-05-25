@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
@@ -18,6 +19,7 @@ enum AuthResult {
   tooManyRequests,
   lockedOut,
   networkError,
+  googleSignInFailed,
   unknown,
 }
 
@@ -38,6 +40,7 @@ class AuthService {
   final FirebaseAuth? _injectedAuth;
   final GoogleSignIn _googleSignIn;
   final FirestoreService _firestoreService;
+  UserRole? _pendingLoginRole;
 
   /// Returns the injected FirebaseAuth or the default singleton.
   FirebaseAuth get _auth => _injectedAuth ?? FirebaseAuth.instance;
@@ -47,6 +50,18 @@ class AuthService {
 
   /// Stream of auth-state changes.
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  /// Stores an intended role for the next login attempt.
+  void setPendingLoginRole(UserRole role) {
+    _pendingLoginRole = role;
+  }
+
+  /// Returns and clears the intended role for the next login attempt.
+  UserRole? consumePendingLoginRole() {
+    final role = _pendingLoginRole;
+    _pendingLoginRole = null;
+    return role;
+  }
 
   // ---------------------------------------------------------------------------
   // Email / Password
@@ -95,6 +110,7 @@ class AuthService {
   Future<AuthResult> signInWithEmail({
     required String email,
     required String password,
+    UserRole role = UserRole.user,
   }) async {
     try {
       final locked = await _firestoreService.isLockedOut(email);
@@ -110,6 +126,13 @@ class AuthService {
       if (user != null && !user.emailVerified) {
         await _auth.signOut();
         return AuthResult.emailNotVerified;
+      }
+
+      if (user != null) {
+        await _ensureFirestoreUser(
+          user,
+          desiredRole: role,
+        );
       }
 
       await _firestoreService.resetLoginAttempts(email);
@@ -135,12 +158,17 @@ class AuthService {
   /// package flow is used instead.
   ///
   /// Returns [AuthResult.canceled] when the user dismisses the picker.
-  Future<AuthResult> signInWithGoogle() async {
+  Future<AuthResult> signInWithGoogle({
+    UserRole role = UserRole.user,
+  }) async {
     try {
       if (kIsWeb) {
         final googleProvider = GoogleAuthProvider();
         final userCredential = await _auth.signInWithPopup(googleProvider);
-        await _ensureFirestoreUser(userCredential.user!);
+        await _ensureFirestoreUser(
+          userCredential.user!,
+          desiredRole: role,
+        );
         return AuthResult.success;
       }
 
@@ -155,7 +183,10 @@ class AuthService {
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
-      await _ensureFirestoreUser(userCredential.user!);
+      await _ensureFirestoreUser(
+        userCredential.user!,
+        desiredRole: role,
+      );
       return AuthResult.success;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'popup-closed-by-user' ||
@@ -163,8 +194,15 @@ class AuthService {
         return AuthResult.canceled;
       }
       return _mapFirebaseAuthException(e);
+    } on PlatformException catch (e) {
+      // google_sign_in throws PlatformException when SHA-1 / client ID is
+      // not configured for the current platform build.
+      if (e.code == 'sign_in_canceled' || e.code == 'canceled') {
+        return AuthResult.canceled;
+      }
+      return AuthResult.googleSignInFailed;
     } catch (_) {
-      return AuthResult.unknown;
+      return AuthResult.googleSignInFailed;
     }
   }
 
@@ -178,14 +216,19 @@ class AuthService {
   /// `sign_in_with_apple` native package is not supported on web.
   ///
   /// Returns [AuthResult.canceled] when the user dismisses the picker.
-  Future<AuthResult> signInWithApple() async {
+  Future<AuthResult> signInWithApple({
+    UserRole role = UserRole.user,
+  }) async {
     try {
       if (kIsWeb) {
         final appleProvider = OAuthProvider('apple.com')
           ..addScope('email')
           ..addScope('name');
         final userCredential = await _auth.signInWithPopup(appleProvider);
-        await _ensureFirestoreUser(userCredential.user!);
+        await _ensureFirestoreUser(
+          userCredential.user!,
+          desiredRole: role,
+        );
         return AuthResult.success;
       }
 
@@ -205,6 +248,7 @@ class AuthService {
       final userCredential = await _auth.signInWithCredential(oauthCredential);
       await _ensureFirestoreUser(
         userCredential.user!,
+        desiredRole: role,
         displayNameOverride:
             [appleCredential.givenName, appleCredential.familyName]
                 .where((s) => s != null && s.isNotEmpty)
@@ -321,6 +365,7 @@ class AuthService {
   Future<void> _ensureFirestoreUser(
     User firebaseUser, {
     String? displayNameOverride,
+    UserRole desiredRole = UserRole.user,
   }) async {
     final existing = await _firestoreService.getUser(firebaseUser.uid);
     if (existing == null) {
@@ -331,9 +376,20 @@ class AuthService {
             ? displayNameOverride!
             : (firebaseUser.displayName ?? 'Usuario'),
         photoUrl: firebaseUser.photoURL,
+        role: desiredRole,
+        verificationStatus: BusinessVerificationStatus.none,
         createdAt: DateTime.now(),
       );
       await _firestoreService.createUser(gazuUser);
+      return;
+    }
+
+    if (desiredRole == UserRole.business && existing.role != UserRole.business) {
+      await _firestoreService.setUserRole(
+        firebaseUser.uid,
+        role: UserRole.business,
+        verificationStatus: BusinessVerificationStatus.none,
+      );
     }
   }
 
@@ -384,6 +440,10 @@ String authResultMessage(AuthResult result) {
           'Inténtalo en $kLockoutDurationMinutes minutos.';
     case AuthResult.networkError:
       return 'Error de red. Verifica tu conexión a internet.';
+    case AuthResult.googleSignInFailed:
+      return 'No se pudo iniciar sesión con Google. '
+          'Revisa la configuración de Google Sign-In (SHA-1/Client ID) '
+          'o intenta de nuevo.';
     case AuthResult.unknown:
       return 'Ocurrió un error inesperado. Inténtalo de nuevo.';
   }

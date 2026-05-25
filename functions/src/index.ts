@@ -19,6 +19,9 @@ const MAX_FAILED_ATTEMPTS = 5;
 /** Lockout window in milliseconds (15 minutes). */
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 
+/** Safe write chunk size to stay under Firestore 500-op batch limit. */
+const FIRESTORE_BATCH_CHUNK_SIZE = 400;
+
 // ---------------------------------------------------------------------------
 // beforeSignIn blocking function
 // ---------------------------------------------------------------------------
@@ -125,3 +128,62 @@ export const onUserDeleted = functions.auth.user().onDelete(async (user) => {
   await batch.commit();
   functions.logger.info(`Cleaned up data for deleted user ${uid}`);
 });
+
+// ---------------------------------------------------------------------------
+// Business Master Switch propagation (issue #2 – Gestión de negocios)
+// ---------------------------------------------------------------------------
+
+/**
+ * Propagates business Master Switch changes to all services under:
+ * `/negocios/{businessId}/servicios/{serviceId}`.
+ *
+ * - If business status becomes `inactive`, all services are disabled.
+ * - If business status becomes `active`, all services are re-enabled.
+ */
+export const onBusinessStatusChanged = functions.firestore
+  .document("negocios/{businessId}")
+  .onUpdate(async (change, context) => {
+    const beforeStatus = change.before.get("status") as string | undefined;
+    const afterStatus = change.after.get("status") as string | undefined;
+
+    if (beforeStatus === afterStatus) {
+      return;
+    }
+
+    if (afterStatus !== "active" && afterStatus !== "inactive") {
+      return;
+    }
+
+    const businessId = context.params.businessId as string;
+    const shouldActivateServices = afterStatus === "active";
+    const servicesRef = db
+      .collection("negocios")
+      .doc(businessId)
+      .collection("servicios");
+
+    const servicesSnap = await servicesRef.get();
+    if (servicesSnap.empty) {
+      return;
+    }
+
+    const docs = servicesSnap.docs;
+    // Firestore batches support up to 500 writes. We use 400 to keep a 100-write
+    // safety margin for future metadata writes and avoid edge-limit failures.
+    for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_CHUNK_SIZE) {
+      const batch = db.batch();
+      const chunk = docs.slice(i, i + FIRESTORE_BATCH_CHUNK_SIZE);
+
+      for (const doc of chunk) {
+        batch.update(doc.ref, {
+          isActive: shouldActivateServices,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+    }
+
+    functions.logger.info(
+      `Master Switch propagated for negocio ${businessId}: ${afterStatus}`
+    );
+  });

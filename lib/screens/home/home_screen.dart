@@ -62,6 +62,10 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
+          drawer: _AppDrawer(
+            role: role,
+            authService: authService,
+          ),
           body: _buildBodyForRole(context, role, firebaseUser, user),
         );
       },
@@ -234,15 +238,6 @@ class _BusinessPanel extends StatelessWidget {
                 builder: (_) => const BusinessDashboardScreen()),
           ),
         ),
-        _HomeCard(
-          icon: Icons.design_services_outlined,
-          title: 'Alta de Servicios',
-          subtitle: 'Agrega servicios a tu negocio',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (_) => const ServiceRegistrationScreen()),
-          ),
-        ),
         const _HomeCard(
           icon: Icons.group,
           title: 'Equipo / Staff',
@@ -271,6 +266,126 @@ class _BusinessPanel extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _AppDrawer extends StatelessWidget {
+  const _AppDrawer({
+    required this.role,
+    required this.authService,
+  });
+
+  final UserRole role;
+  final AuthService authService;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          children: [
+            const DrawerHeader(
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  'Menú',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.storefront_outlined),
+              title: const Text('Mi negocio'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const BusinessDashboardScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.design_services_outlined),
+              title: const Text('Configurar negocio y servicios'),
+              subtitle:
+                  const Text('Flujo guiado profesional para publicar y reservar'),
+              onTap: () => _handleBusinessSetupFlow(context),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Cerrar sesión'),
+              onTap: () async {
+                Navigator.pop(context);
+                await authService.signOut();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleBusinessSetupFlow(BuildContext context) async {
+    Navigator.pop(context);
+
+    if (role == UserRole.business) {
+      final firestoreService = context.read<FirestoreService>();
+      final uid = authService.currentUser?.uid;
+      if (uid == null) return;
+
+      final businesses = await firestoreService.getBusinessesByOwner(uid);
+
+      if (!context.mounted) return;
+      if (businesses.isEmpty) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const BusinessRegistrationScreen(
+              continueToServiceRegistration: true,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ServiceRegistrationScreen(
+              initialBusinessId: businesses.first.id,
+              startAtServiceInfoStep: true,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final shouldRelogin = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Se requiere cuenta de negocio'),
+        content: const Text(
+          'Para continuar con el alta profesional de negocio y servicios, '
+          'debes iniciar sesión con una cuenta business. '
+          'Se cerrará tu sesión actual para cambiar de cuenta.\n\n'
+          'En la pantalla de inicio de sesión activa la opción '
+          '"Entrar como cuenta business".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Cambiar cuenta'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRelogin == true) {
+      authService.setPendingLoginRole(UserRole.business);
+      await authService.signOut();
+    }
   }
 }
 

@@ -51,6 +51,23 @@ class FirestoreService {
     await _usersRef.doc(uid).update(updates);
   }
 
+  /// Updates the user role and optionally resets the verification status.
+  ///
+  /// Used when a user chooses to continue as a business account at login.
+  Future<void> setUserRole(
+    String uid, {
+    required UserRole role,
+    BusinessVerificationStatus? verificationStatus,
+  }) async {
+    final updates = <String, dynamic>{
+      'role': role.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (verificationStatus != null)
+        'verificationStatus': verificationStatus.value,
+    };
+    await _usersRef.doc(uid).update(updates);
+  }
+
   /// Streams real-time updates for the user with [uid].
   Stream<GazuUser?> userStream(String uid) {
     return _usersRef.doc(uid).snapshots().map((snap) {
@@ -150,17 +167,40 @@ class FirestoreService {
   Future<void> updateBusiness(
     String id, {
     String? nombre,
+    String? descripcion,
     String? categoria,
     String? logoUrl,
     Map<String, Map<String, String>>? horarios,
+    BusinessStatus? status,
+    String? masterSwitchReason,
   }) async {
     final updates = <String, dynamic>{
       'updatedAt': FieldValue.serverTimestamp(),
       if (nombre != null) 'nombre': nombre,
+      if (descripcion != null) 'descripcion': descripcion,
       if (categoria != null) 'categoria': categoria,
       if (logoUrl != null) 'logoUrl': logoUrl,
       if (horarios != null)
         'horarios': horarios.map((day, times) => MapEntry(day, times)),
+      if (status != null) 'status': status.value,
+      if (masterSwitchReason != null) 'masterSwitchReason': masterSwitchReason,
+    };
+    await _negociosRef.doc(id).update(updates);
+  }
+
+  /// Updates the Master Switch status for a business.
+  Future<void> setBusinessMasterSwitch(
+    String id, {
+    required bool enabled,
+    String? reason,
+  }) async {
+    final updates = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+      'status': enabled ? BusinessStatus.active.value : BusinessStatus.inactive.value,
+      if (!enabled && reason != null && reason.trim().isNotEmpty)
+        'masterSwitchReason': reason.trim()
+      else
+        'masterSwitchReason': FieldValue.delete(),
     };
     await _negociosRef.doc(id).update(updates);
   }
@@ -174,6 +214,12 @@ class FirestoreService {
             snap.docs.map(GazuBusiness.fromFirestore).toList());
   }
 
+  /// Gets all businesses owned by [ownerId] once.
+  Future<List<GazuBusiness>> getBusinessesByOwner(String ownerId) async {
+    final snap = await _negociosRef.where('ownerId', isEqualTo: ownerId).get();
+    return snap.docs.map(GazuBusiness.fromFirestore).toList();
+  }
+
   /// Sets `hasBusiness` flag on the user document.
   Future<void> _markUserHasBusiness(String uid, {required bool value}) async {
     await _usersRef.doc(uid).update({
@@ -185,6 +231,69 @@ class FirestoreService {
   /// Publicly exposed wrapper so [ProfileSwitcher] can toggle the flag.
   Future<void> setUserHasBusiness(String uid, {required bool value}) =>
       _markUserHasBusiness(uid, value: value);
+
+  // ---------------------------------------------------------------------------
+  // Business owner KYC verification (anti-fraud)
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> get _verificacionesRef =>
+      _firestore.collection(AppCollections.verificaciones);
+
+  /// Submits the KYC verification data for [uid].
+  ///
+  /// Stores the verification document in `/verificaciones_negocio/{uid}` and
+  /// updates the user's `verificationStatus` field to `'pending'`.
+  Future<void> submitOwnerVerification({
+    required String uid,
+    required String fullLegalName,
+    required String rfc,
+    String? curp,
+    required String phone,
+    required String businessEmail,
+    required String idType,
+    required String idFrontUrl,
+    String? idBackUrl,
+  }) async {
+    final batch = _firestore.batch();
+
+    final verDoc = _verificacionesRef.doc(uid);
+    batch.set(verDoc, {
+      'uid': uid,
+      'fullLegalName': fullLegalName.trim(),
+      'rfc': rfc.trim().toUpperCase(),
+      if (curp != null && curp.trim().isNotEmpty) 'curp': curp.trim().toUpperCase(),
+      'phone': phone.trim(),
+      'businessEmail': businessEmail.trim().toLowerCase(),
+      'idType': idType,
+      'idFrontUrl': idFrontUrl,
+      if (idBackUrl != null && idBackUrl.isNotEmpty) 'idBackUrl': idBackUrl,
+      'status': 'pending',
+      'submittedAt': FieldValue.serverTimestamp(),
+    });
+
+    final userDoc = _usersRef.doc(uid);
+    batch.update(userDoc, {
+      'verificationStatus': 'pending',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  /// Streams real-time updates for the KYC verification document of [uid].
+  Stream<Map<String, dynamic>?> verificationStream(String uid) {
+    return _verificacionesRef.doc(uid).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return snap.data();
+    });
+  }
+
+  /// Retrieves the KYC verification document for [uid] once.
+  Future<Map<String, dynamic>?> getVerification(String uid) async {
+    final snap = await _verificacionesRef.doc(uid).get();
+    if (!snap.exists) return null;
+    return snap.data();
+  }
 
   // ---------------------------------------------------------------------------
   // Service CRUD (subcollection /negocios/{businessId}/servicios)
@@ -205,6 +314,12 @@ class FirestoreService {
     return _serviciosRef(businessId).snapshots().map(
           (snap) => snap.docs.map(GazuService.fromFirestore).toList(),
         );
+  }
+
+  /// Gets all services of [businessId] once.
+  Future<List<GazuService>> getServices(String businessId) async {
+    final snap = await _serviciosRef(businessId).get();
+    return snap.docs.map(GazuService.fromFirestore).toList();
   }
 
   /// Updates editable fields for an existing service.

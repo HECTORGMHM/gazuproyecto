@@ -7,6 +7,7 @@ import '../../models/service_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/constants.dart';
+import 'business_dashboard_screen.dart';
 
 /// Service categories available when registering a service.
 const List<String> kServiceCategories = [
@@ -37,9 +38,17 @@ const List<int> kDurationOptions = [15, 30, 45, 60, 90, 120, 150, 180];
 ///   - Step 3: Set price and duration.
 ///
 /// On completion the service document is written to
-/// `/negocios/{businessId}/servicios/{id}` via [FirestoreService.createService].
+/// `/negocios/{businessId}/servicios/{id}` via [FirestoreService.createService],
+/// then redirects to [BusinessDashboardScreen].
 class ServiceRegistrationScreen extends StatefulWidget {
-  const ServiceRegistrationScreen({super.key});
+  const ServiceRegistrationScreen({
+    super.key,
+    this.initialBusinessId,
+    this.startAtServiceInfoStep = false,
+  });
+
+  final String? initialBusinessId;
+  final bool startAtServiceInfoStep;
 
   @override
   State<ServiceRegistrationScreen> createState() =>
@@ -77,6 +86,7 @@ class _ServiceRegistrationScreenState
   // Submission state
   // ---------------------------------------------------------------------------
   bool _submitting = false;
+  bool _didApplyInitialBusinessSelection = false;
 
   @override
   void dispose() {
@@ -162,7 +172,9 @@ class _ServiceRegistrationScreenState
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+      );
     } catch (e) {
       _showError('Error al registrar el servicio: $e');
     } finally {
@@ -205,6 +217,20 @@ class _ServiceRegistrationScreenState
 
           if (businesses.isEmpty) {
             return const _NoBusinessPlaceholder();
+          }
+
+          if (!_didApplyInitialBusinessSelection &&
+              widget.initialBusinessId != null) {
+            final preselected = businesses
+                .where((b) => b.id == widget.initialBusinessId)
+                .toList();
+            if (preselected.isNotEmpty) {
+              _selectedBusiness = preselected.first;
+              if (widget.startAtServiceInfoStep && _currentStep == 0) {
+                _currentStep = 1;
+              }
+            }
+            _didApplyInitialBusinessSelection = true;
           }
 
           return Theme(

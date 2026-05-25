@@ -37,6 +37,50 @@ extension UserRoleX on UserRole {
   }
 }
 
+/// KYC / anti-fraud verification status for business owners.
+enum BusinessVerificationStatus {
+  /// User has not submitted a verification request yet.
+  none,
+
+  /// Verification request submitted; awaiting admin review.
+  pending,
+
+  /// Verified and approved – allowed to register businesses.
+  approved,
+
+  /// Previously submitted request was rejected; must resubmit.
+  rejected,
+}
+
+/// Extension helpers for [BusinessVerificationStatus].
+extension BusinessVerificationStatusX on BusinessVerificationStatus {
+  String get value {
+    switch (this) {
+      case BusinessVerificationStatus.none:
+        return 'none';
+      case BusinessVerificationStatus.pending:
+        return 'pending';
+      case BusinessVerificationStatus.approved:
+        return 'approved';
+      case BusinessVerificationStatus.rejected:
+        return 'rejected';
+    }
+  }
+
+  static BusinessVerificationStatus fromString(String? v) {
+    switch (v) {
+      case 'pending':
+        return BusinessVerificationStatus.pending;
+      case 'approved':
+        return BusinessVerificationStatus.approved;
+      case 'rejected':
+        return BusinessVerificationStatus.rejected;
+      default:
+        return BusinessVerificationStatus.none;
+    }
+  }
+}
+
 /// Application user model stored in Firestore.
 class GazuUser {
   final String uid;
@@ -47,6 +91,8 @@ class GazuUser {
   final bool isActive;
   /// `true` once the user has registered at least one business (issue #2).
   final bool hasBusiness;
+  /// KYC / anti-fraud verification status for users with [UserRole.business].
+  final BusinessVerificationStatus verificationStatus;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -58,6 +104,7 @@ class GazuUser {
     this.role = UserRole.user,
     this.isActive = true,
     this.hasBusiness = false,
+    this.verificationStatus = BusinessVerificationStatus.none,
     required this.createdAt,
     this.updatedAt,
   });
@@ -73,6 +120,9 @@ class GazuUser {
       role: UserRoleX.fromString(data['role'] as String?),
       isActive: data['isActive'] as bool? ?? true,
       hasBusiness: data['hasBusiness'] as bool? ?? false,
+      verificationStatus: BusinessVerificationStatusX.fromString(
+        data['verificationStatus'] as String?,
+      ),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -87,6 +137,7 @@ class GazuUser {
       'role': role.name,
       'isActive': isActive,
       'hasBusiness': hasBusiness,
+      'verificationStatus': verificationStatus.value,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
@@ -98,6 +149,7 @@ class GazuUser {
     UserRole? role,
     bool? isActive,
     bool? hasBusiness,
+    BusinessVerificationStatus? verificationStatus,
     DateTime? updatedAt,
   }) {
     return GazuUser(
@@ -108,6 +160,7 @@ class GazuUser {
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
       hasBusiness: hasBusiness ?? this.hasBusiness,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

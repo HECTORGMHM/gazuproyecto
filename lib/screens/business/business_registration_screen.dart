@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +13,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/constants.dart';
 import 'business_dashboard_screen.dart';
+import 'service_registration_screen.dart';
 
 // TODO(#2): Wire Google Maps picker in Step 2 once issue #10
 // (Épica: Geolocalización y mapa) is implemented.
@@ -46,11 +49,17 @@ const List<String> kWeekdays = [
 /// - Step 3: Weekly schedule configuration.
 ///
 /// On completion it writes the business document to `/negocios/` via
-/// [FirestoreService.createBusiness] and navigates to [BusinessDashboardScreen].
+/// [FirestoreService.createBusiness] and navigates to [BusinessDashboardScreen]
+/// (or to [ServiceRegistrationScreen] when the onboarding flow is enabled).
 ///
 /// Related issues: #2 (Gestión de negocios), #10 (Geolocalización).
 class BusinessRegistrationScreen extends StatefulWidget {
-  const BusinessRegistrationScreen({super.key});
+  const BusinessRegistrationScreen({
+    super.key,
+    this.continueToServiceRegistration = false,
+  });
+
+  final bool continueToServiceRegistration;
 
   @override
   State<BusinessRegistrationScreen> createState() =>
@@ -69,6 +78,7 @@ class _BusinessRegistrationScreenState
   // ---------------------------------------------------------------------------
   final _step1Key = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
+  final _descripcionController = TextEditingController();
   String? _selectedCategory;
 
   // ---------------------------------------------------------------------------
@@ -78,6 +88,7 @@ class _BusinessRegistrationScreenState
   // Épica: Geolocalización issue is implemented.
   GeoPoint _ubicacion = const GeoPoint(19.4326, -99.1332); // CDMX default
   File? _logoFile;
+  Uint8List? _logoBytes;
   String? _logoUrl;
 
   // ---------------------------------------------------------------------------
@@ -96,6 +107,7 @@ class _BusinessRegistrationScreenState
   @override
   void dispose() {
     _nombreController.dispose();
+    _descripcionController.dispose();
     super.dispose();
   }
 
@@ -112,15 +124,23 @@ class _BusinessRegistrationScreenState
       imageQuality: 85,
     );
     if (picked == null) return;
-    setState(() => _logoFile = File(picked.path));
+    final bytes = kIsWeb ? await picked.readAsBytes() : null;
+    setState(() {
+      _logoFile = kIsWeb ? null : File(picked.path);
+      _logoBytes = bytes;
+    });
   }
 
   Future<String?> _uploadLogo(String ownerId) async {
-    if (_logoFile == null) return null;
-    final ext = _logoFile!.path.split('.').last.toLowerCase();
+    if (_logoFile == null && _logoBytes == null) return null;
+    final ext = _logoFile?.path.split('.').last.toLowerCase() ?? 'jpg';
     final ref = FirebaseStorage.instance
         .ref('negocios/$ownerId/${DateTime.now().millisecondsSinceEpoch}.$ext');
-    await ref.putFile(_logoFile!);
+    if (_logoBytes != null) {
+      await ref.putData(_logoBytes!);
+    } else if (_logoFile != null) {
+      await ref.putFile(_logoFile!);
+    }
     return ref.getDownloadURL();
   }
 
@@ -144,6 +164,7 @@ class _BusinessRegistrationScreenState
       final business = GazuBusiness(
         ownerId: uid,
         nombre: _nombreController.text.trim(),
+        descripcion: _descripcionController.text.trim(),
         categoria: _selectedCategory ?? '',
         ubicacion: _ubicacion,
         horarios: Map.from(_horarios),
@@ -152,12 +173,23 @@ class _BusinessRegistrationScreenState
         createdAt: DateTime.now(),
       );
 
-      await firestoreService.createBusiness(business);
+      final businessId = await firestoreService.createBusiness(business);
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
-      );
+      if (widget.continueToServiceRegistration) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ServiceRegistrationScreen(
+              initialBusinessId: businessId,
+              startAtServiceInfoStep: true,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+        );
+      }
     } catch (e) {
       _showError('Error al registrar el negocio: $e');
     } finally {
@@ -333,6 +365,24 @@ class _BusinessRegistrationScreenState
               },
             ),
             const SizedBox(height: 16),
+            TextFormField(
+              key: const Key('businessDescriptionField'),
+              controller: _descripcionController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: _inputDecoration(
+                label: 'Descripción del negocio',
+                icon: Icons.description_outlined,
+              ),
+              validator: (v) {
+                final trimmed = v?.trim() ?? '';
+                if (trimmed.length > 280) {
+                  return 'Máximo 280 caracteres (actualmente: ${trimmed.length})';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const Key('businessCategoryDropdown'),
               value: _selectedCategory,
@@ -410,14 +460,21 @@ class _BusinessRegistrationScreenState
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _logoFile != null
+                      || _logoBytes != null
                       ? const Color(AppColors.primaryOrange)
                       : Colors.white24,
                 ),
               ),
-              child: _logoFile != null
+              child: _logoFile != null || _logoBytes != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(_logoFile!, fit: BoxFit.cover),
+                      child: _logoBytes != null
+                          ? Image.memory(
+                              _logoBytes!,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                            )
+                          : Image.file(_logoFile!, fit: BoxFit.cover),
                     )
                   : const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
