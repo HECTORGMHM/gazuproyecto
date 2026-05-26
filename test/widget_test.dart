@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:gazu/models/business_model.dart';
+import 'package:gazu/models/review_model.dart';
 import 'package:gazu/models/user_model.dart';
 import 'package:gazu/screens/auth/email_verification_screen.dart';
 import 'package:gazu/screens/auth/login_screen.dart';
@@ -545,6 +546,44 @@ void main() {
     test('copyWith changes status', () {
       final updated = base.copyWith(status: BusinessStatus.active);
       expect(updated.status, BusinessStatus.active);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // GazuReview model tests (issue #9 – Sistema de reputación)
+  // -------------------------------------------------------------------------
+
+  group('GazuReview', () {
+    final now = DateTime(2025, 1, 1);
+    final review = GazuReview(
+      appointmentId: 'appt-1',
+      authorId: 'user-1',
+      targetType: ReviewTargetType.business,
+      targetId: 'business-1',
+      rating: 2,
+      comment: 'La atención fue lenta pero el resultado final fue correcto.',
+      createdAt: now,
+    );
+
+    test('uniqueId uses appointmentId and authorId', () {
+      expect(
+        GazuReview.uniqueId(appointmentId: 'appt-1', authorId: 'user-1'),
+        'appt-1_user-1',
+      );
+    });
+
+    test('isNegative is true for ratings <= 2', () {
+      expect(review.isNegative, isTrue);
+      expect(review.copyWith(rating: 3).isNegative, isFalse);
+    });
+
+    test('toFirestore contains expected review keys', () {
+      final map = review.toFirestore();
+      expect(map['appointmentId'], 'appt-1');
+      expect(map['authorId'], 'user-1');
+      expect(map['targetType'], 'business');
+      expect(map['rating'], 2);
+      expect(map['comment'], isNotEmpty);
     });
   });
 

@@ -18,6 +18,29 @@ const MAX_FAILED_ATTEMPTS = 5;
 
 /** Lockout window in milliseconds (15 minutes). */
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
+const LOW_RATING_THRESHOLD = 2;
+const COORDINATED_ATTACK_THRESHOLD = 10;
+const ATTACK_WINDOW_MS = 60 * 60 * 1000;
+const OFFENSIVE_WORDS = [
+  "idiota",
+  "estupido",
+  "estúpido",
+  "pendejo",
+  "mierda",
+];
+const COLLECTION_REVIEWS = "reviews";
+const COLLECTION_NEGOCIOS = "negocios";
+const COLLECTION_STAFF = "staff";
+const COLLECTION_REPUTATION_STATS = "reputationStats";
+
+type ReviewData = {
+  targetType?: string;
+  targetId?: string;
+  rating?: number;
+  comment?: string;
+  authorId?: string;
+  createdAt?: admin.firestore.Timestamp;
+};
 
 // ---------------------------------------------------------------------------
 // beforeSignIn blocking function
@@ -125,3 +148,124 @@ export const onUserDeleted = functions.auth.user().onDelete(async (user) => {
   await batch.commit();
   functions.logger.info(`Cleaned up data for deleted user ${uid}`);
 });
+
+// ---------------------------------------------------------------------------
+// Gazu Trust – review moderation and reputation aggregation
+// ---------------------------------------------------------------------------
+
+function normalize(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function containsOffensiveLanguage(comment: string): boolean {
+  const normalized = normalize(comment);
+  return OFFENSIVE_WORDS.some((word) => normalized.includes(normalize(word)));
+}
+
+async function getRecentLowRatingsCount(
+  targetType: string,
+  targetId: string
+): Promise<number> {
+  const thresholdDate = new Date(Date.now() - ATTACK_WINDOW_MS);
+  const recentSnap = await db
+    .collection(COLLECTION_REVIEWS)
+    .where("targetType", "==", targetType)
+    .where("targetId", "==", targetId)
+    .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(thresholdDate))
+    .get();
+
+  return recentSnap.docs.reduce((count, doc) => {
+    const rating = (doc.data().rating as number | undefined) ?? 0;
+    return rating <= LOW_RATING_THRESHOLD ? count + 1 : count;
+  }, 0);
+}
+
+export const moderateReviewOnCreate = functions.firestore
+  .document(`${COLLECTION_REVIEWS}/{reviewId}`)
+  .onCreate(async (snapshot) => {
+    const data = (snapshot.data() ?? {}) as ReviewData;
+    const targetType = data.targetType ?? "";
+    const targetId = data.targetId ?? "";
+    const comment = data.comment ?? "";
+
+    if (!targetType || !targetId) {
+      return;
+    }
+
+    const offensive = comment.length > 0 && containsOffensiveLanguage(comment);
+    const recentLowRatings = await getRecentLowRatingsCount(targetType, targetId);
+    const coordinatedAttack = recentLowRatings >= COORDINATED_ATTACK_THRESHOLD;
+
+    await snapshot.ref.update({
+      flaggedOffensive: offensive,
+      flaggedCoordinatedAttack: coordinatedAttack,
+      moderationUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+export const updateReputationStats = functions.firestore
+  .document(`${COLLECTION_REVIEWS}/{reviewId}`)
+  .onWrite(async (change) => {
+    const after = change.after.exists
+      ? (change.after.data() as ReviewData)
+      : undefined;
+    const before = change.before.exists
+      ? (change.before.data() as ReviewData)
+      : undefined;
+
+    const targetType = after?.targetType ?? before?.targetType;
+    const targetId = after?.targetId ?? before?.targetId;
+    if (!targetType || !targetId) {
+      return;
+    }
+
+    const reviewsSnap = await db
+      .collection(COLLECTION_REVIEWS)
+      .where("targetType", "==", targetType)
+      .where("targetId", "==", targetId)
+      .get();
+
+    const reviews = reviewsSnap.docs.map((doc) => doc.data() as ReviewData);
+    const totalReviews = reviews.length;
+    const sumRatings = reviews.reduce((sum, review) => {
+      const rating = review.rating ?? 0;
+      return sum + rating;
+    }, 0);
+    const averageRating = totalReviews > 0 ? sumRatings / totalReviews : 0;
+
+    const lowRatingsLastHour = await getRecentLowRatingsCount(targetType, targetId);
+    const possibleAttack = lowRatingsLastHour >= COORDINATED_ATTACK_THRESHOLD;
+
+    const stats = {
+      targetType,
+      targetId,
+      averageRating,
+      totalReviews,
+      lowRatingsLastHour,
+      possibleAttack,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    const targetCollection =
+      targetType === "staff" ? COLLECTION_STAFF : COLLECTION_NEGOCIOS;
+    await Promise.all([
+      db.collection(targetCollection).doc(targetId).set(
+        {
+          reputation: {
+            averageRating,
+            totalReviews,
+            lowRatingsLastHour,
+            possibleAttack,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      ),
+      db.collection(COLLECTION_REPUTATION_STATS)
+        .doc(`${targetType}_${targetId}`)
+        .set(stats, { merge: true }),
+    ]);
+  });

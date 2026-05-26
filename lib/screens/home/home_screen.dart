@@ -2,11 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/user_model.dart';
+import '../../models/review_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/profile_switcher.dart';
 import '../business/business_dashboard_screen.dart';
 import '../business/business_registration_screen.dart';
+import '../reputation/review_submission_screen.dart';
+import '../reputation/reviews_screen.dart';
 import '../business/service_registration_screen.dart';
 import '../profile/update_profile_screen.dart';
 
@@ -92,7 +95,12 @@ class HomeScreen extends StatelessWidget {
           const Divider(height: 32),
 
           // Role-specific content
-          Expanded(child: _RoleContent(role: role)),
+          Expanded(
+            child: _RoleContent(
+              role: role,
+              userId: firebaseUser.uid,
+            ),
+          ),
         ],
       ),
     );
@@ -153,14 +161,18 @@ class _RoleBadge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _RoleContent extends StatelessWidget {
-  const _RoleContent({required this.role});
+  const _RoleContent({
+    required this.role,
+    required this.userId,
+  });
   final UserRole role;
+  final String userId;
 
   @override
   Widget build(BuildContext context) {
     return switch (role) {
       UserRole.business => const _BusinessPanel(),
-      UserRole.staff => const _StaffPanel(),
+      UserRole.staff => _StaffPanel(userId: userId),
       UserRole.user => const _UserPanel(),
     };
   }
@@ -183,6 +195,14 @@ class _UserPanel extends StatelessWidget {
           title: 'Mis reservas',
           subtitle: 'Consulta y gestiona tus citas',
         ),
+        _HomeCard(
+          icon: Icons.star_rate_outlined,
+          title: 'Calificar servicio (Gazu Trust)',
+          subtitle: 'Deja tu reseña después de cada cita finalizada',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ReviewSubmissionScreen()),
+          ),
+        ),
         const _HomeCard(
           icon: Icons.favorite_outline,
           title: 'Favoritos',
@@ -197,21 +217,36 @@ class _UserPanel extends StatelessWidget {
 }
 
 class _StaffPanel extends StatelessWidget {
-  const _StaffPanel();
+  const _StaffPanel({required this.userId});
+  final String userId;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      children: const [
-        _HomeCard(
+      children: [
+        const _HomeCard(
           icon: Icons.calendar_month,
           title: 'Agenda del día',
           subtitle: 'Citas asignadas a tu agenda',
         ),
-        _HomeCard(
+        const _HomeCard(
           icon: Icons.people_outline,
           title: 'Clientes',
           subtitle: 'Historial y notas de clientes',
+        ),
+        _HomeCard(
+          icon: Icons.reviews_outlined,
+          title: 'Reseñas del staff',
+          subtitle: 'Consulta y responde reseñas negativas',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ReviewsScreen(
+                targetType: ReviewTargetType.staff,
+                targetId: userId,
+                title: 'Mis reseñas',
+              ),
+            ),
+          ),
         ),
       ],
     );

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/business_model.dart';
+import '../../models/review_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/constants.dart';
+import '../reputation/reviews_screen.dart';
 import 'business_registration_screen.dart';
 
 // TODO(#2): Implement full business management (services, staff, stats)
@@ -157,13 +159,32 @@ class _BusinessCard extends StatelessWidget {
           business.categoria,
           style: const TextStyle(color: Colors.white54),
         ),
-        trailing: Chip(
-          label: Text(statusLabel,
-              style: const TextStyle(fontSize: 11)),
-          backgroundColor: statusColor.withAlpha(40),
-          side: BorderSide(color: statusColor.withAlpha(100)),
-          labelStyle: TextStyle(color: statusColor),
-          padding: EdgeInsets.zero,
+        trailing: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Chip(
+              label: Text(statusLabel, style: const TextStyle(fontSize: 11)),
+              backgroundColor: statusColor.withAlpha(40),
+              side: BorderSide(color: statusColor.withAlpha(100)),
+              labelStyle: TextStyle(color: statusColor),
+              padding: EdgeInsets.zero,
+            ),
+            IconButton(
+              tooltip: 'Ver reseñas',
+              icon: const Icon(Icons.reviews_outlined, color: Colors.white70, size: 18),
+              onPressed: business.id == null
+                  ? null
+                  : () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ReviewsScreen(
+                            targetType: ReviewTargetType.business,
+                            targetId: business.id!,
+                            title: 'Reseñas de ${business.nombre}',
+                          ),
+                        ),
+                      ),
+            ),
+          ],
         ),
       ),
     );

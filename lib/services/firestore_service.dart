@@ -1,8 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/business_model.dart';
+import '../models/review_model.dart';
 import '../models/service_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
+
+const Set<String> _completedAppointmentStatuses = {
+  'completed',
+  'completada',
+  'finalized',
+  'finalizada',
+};
 
 /// Service for Firestore user data operations.
 class FirestoreService {
@@ -20,6 +28,12 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _negociosRef =>
       _firestore.collection(AppCollections.negocios);
+
+  CollectionReference<Map<String, dynamic>> get _appointmentsRef =>
+      _firestore.collection(AppCollections.appointments);
+
+  CollectionReference<Map<String, dynamic>> get _reviewsRef =>
+      _firestore.collection(AppCollections.reviews);
 
   // ---------------------------------------------------------------------------
   // User CRUD
@@ -233,5 +247,74 @@ class FirestoreService {
   /// Deletes a service document.
   Future<void> deleteService(String businessId, String serviceId) async {
     await _serviciosRef(businessId).doc(serviceId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Review & reputation (issue #9 – Sistema de reputación / Gazu Trust)
+  // ---------------------------------------------------------------------------
+
+  /// Creates one review per appointment and user.
+  ///
+  /// Throws [StateError] if:
+  /// - The appointment does not exist.
+  /// - The appointment is not in a finished/completed state.
+  /// - The user has already submitted a review for the same appointment.
+  Future<void> submitReview(GazuReview review) async {
+    final reviewId = GazuReview.uniqueId(
+      appointmentId: review.appointmentId,
+      authorId: review.authorId,
+    );
+    final reviewRef = _reviewsRef.doc(reviewId);
+    final appointmentRef = _appointmentsRef.doc(review.appointmentId);
+
+    await _firestore.runTransaction((tx) async {
+      final appointmentSnap = await tx.get(appointmentRef);
+      if (!appointmentSnap.exists) {
+        throw StateError('La cita no existe.');
+      }
+
+      final appointmentData = appointmentSnap.data()!;
+      final status = (appointmentData['status'] as String? ?? '').toLowerCase();
+      final isFinished = _completedAppointmentStatuses.contains(status);
+      if (!isFinished) {
+        throw StateError('Solo puedes calificar citas finalizadas.');
+      }
+
+      final clientId = appointmentData['clientId'] as String?;
+      if (clientId != null && clientId != review.authorId) {
+        throw StateError('Solo el cliente dueño de la cita puede calificar.');
+      }
+
+      final existing = await tx.get(reviewRef);
+      if (existing.exists) {
+        throw StateError('Ya existe una reseña para esta cita.');
+      }
+
+      tx.set(reviewRef, review.toFirestore());
+    });
+  }
+
+  /// Streams reviews for a target profile (business or staff).
+  Stream<List<GazuReview>> reviewsForTargetStream({
+    required ReviewTargetType targetType,
+    required String targetId,
+  }) {
+    return _reviewsRef
+        .where('targetType', isEqualTo: targetType.value)
+        .where('targetId', isEqualTo: targetId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map(GazuReview.fromFirestore).toList());
+  }
+
+  /// Associates a business/staff response to an existing review.
+  Future<void> respondToReview({
+    required String reviewId,
+    required GazuReviewResponse response,
+  }) async {
+    await _reviewsRef.doc(reviewId).update({
+      'response': response.toFirestore(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }
