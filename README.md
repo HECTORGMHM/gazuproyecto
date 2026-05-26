@@ -1,17 +1,38 @@
-# gazu
+# Gazu
 
-A new Flutter project.
+Aplicación Flutter para autenticación, gestión de negocio y reputación.
 
-## Getting Started
+## Requisitos
 
-This project is a starting point for a Flutter application.
+- Flutter SDK instalado y funcionando en tu entorno
+- Proyecto Firebase configurado
+- Node.js si también vas a trabajar con `functions/`
 
-A few resources to get you started if this is your first Flutter project:
+## Configuración inicial
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. Instala dependencias:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+   ```bash
+   flutter pub get
+   ```
+
+2. Genera la configuración de Firebase por plataforma:
+
+   ```bash
+   flutterfire configure
+   ```
+
+3. Verifica que existan estos archivos nativos:
+   - `/tmp/workspace/HECTORGMHM/gazuproyecto/android/app/google-services.json`
+   - `/tmp/workspace/HECTORGMHM/gazuproyecto/ios/Runner/GoogleService-Info.plist`
+
+4. Valida el proyecto:
+
+   ```bash
+   flutter analyze
+   flutter test
+   ```
+
+## Nota importante
+
+El proyecto trae validación de arranque para avisar cuando Firebase no está configurado correctamente en la plataforma actual. Si ves una pantalla de error al iniciar, normalmente falta ejecutar `flutterfire configure` o agregar los archivos nativos de Firebase.
