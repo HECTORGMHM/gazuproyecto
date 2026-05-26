@@ -23,8 +23,8 @@ Aplicación Flutter para autenticación, gestión de negocio y reputación.
    ```
 
 3. Verifica que existan estos archivos nativos:
-   - `/tmp/workspace/HECTORGMHM/gazuproyecto/android/app/google-services.json`
-   - `/tmp/workspace/HECTORGMHM/gazuproyecto/ios/Runner/GoogleService-Info.plist`
+   - `android/app/google-services.json`
+   - `ios/Runner/GoogleService-Info.plist`
 
 4. Valida el proyecto:
 
